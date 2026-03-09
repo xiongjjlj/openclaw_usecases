@@ -65,9 +65,9 @@
     {
       "id": "uc_phone",
       "title": "OpenClaw Phone Case",
-      "summary": "ClawPhone / OpenClaw Phone 是“手机即 Agent 终端”的实战案例：在低成本手机上运行 OpenClaw，并进一步扩展到系统层可控（自定义 Launcher、mini app store、状态面板）。",
-      "problem": "核心痛点不是“能否聊天”，而是“移动端能否持续执行复杂任务并保持可运维”。该案例给出的是完整设备形态与系统改造链路。",
-      "workflow": "1) 在低成本 Android 设备上安装并运行 OpenClaw，验证基础可用。\n2) 接入系统层能力：自定义 Launcher，保证任务与上下文可常驻展示。\n3) 建立 mini app store 链路：通过 OpenClaw 文本指令触发应用生成/更新并一键安装。\n4) 增加原生状态面板：回传宿主机进程、容器、网络、服务状态。\n5) 在真实日常场景下连续运行并迭代。",
+      "summary": "ClawPhone 不是“手机里跑个聊天机器人”，而是把 OpenClaw 做成系统级手机操作层：可控 Launcher、私有应用分发、主机状态面板、上下文壁纸生成、语音/通知/生物认证交互都被串进一个可执行链路。",
+      "problem": "这个案例要解决的核心不是“能不能在手机上聊天”，而是“如何让 OpenClaw 持续控制和改造手机系统行为”。原帖里给的是完整系统改造清单：\n- 自定义 Launcher 由 OpenClaw 经 API 全局控制\n- 私有 mini app store（驻留在 Mac Studio）支持通过发消息触发新 App 生成与现有 App 更新，一键安装\n- 原生 Kotlin 状态面板汇总宿主机进程/容器/dev server/tailscale/traefik/expo/kotlin 等状态\n- 根据天气/位置/todo/日程/生日等上下文自动生成并设置壁纸\n- 支持语音对话、读取通知/短信、播放媒体、弹出选项表单、请求指纹认证",
+      "workflow": "阶段 A：设备与控制面\n1) 在 Android 设备部署 OpenClaw Phone 基础运行环境。\n2) 搭建并接入“可被 API 全控”的自定义 Launcher。\n\n阶段 B：应用与状态闭环\n3) 在 Mac Studio 侧搭建私有 mini app store，并打通“发消息 -> 生成/更新 App -> 一键安装”。\n4) 开发原生 Kotlin 状态面板，实时展示主机与服务运行状态。\n\n阶段 C：个性化与交互能力\n5) 接入上下文信号（天气/位置/todo/事件/生日），自动生成并设置壁纸。\n6) 打通语音、通知/短信读取、媒体控制、表单选择、指纹确认等交互能力。\n\n阶段 D：验证与运营\n7) 用真实日常任务连续跑 3-7 天，记录稳定性、误触发、交互延迟并迭代。",
       "reproPrompt": "",
       "category": "移动与可穿戴",
       "tools": [
@@ -85,11 +85,11 @@
       ],
       "submittedBy": "bear",
       "createdAt": "2026-03-09T04:32:00.000Z",
-      "updatedAt": "2026-03-09T11:15:49Z",
+      "updatedAt": "2026-03-09T12:42:01Z",
       "sourceDate": "2026-02-07",
-      "evidenceNote": "依据 ClawPhone 两条原帖与后续补充帖整理：$25 phone 部署 + 系统层改造（launcher/app-store/stats）。",
-      "reproMode": "manual-first（设备接入 + 系统改造）",
-      "manualSteps": "1) 先按原帖视频完成手机端部署与基础联通。\n2) 再做系统层改造（Launcher / 状态面板 / mini app store）。\n3) 最后才把稳定步骤抽象成自动化脚本。\n说明：该案例不是一条 Prompt 即可复现。",
+      "evidenceNote": "已按原帖列出的5项系统能力与帖子内视频说明重写；此案例以系统改造流程为主，不是 Prompt 一键复现。",
+      "reproMode": "manual-first（系统改造 + 多组件联调）",
+      "manualSteps": "【最低可行复现（MVP）】\n1) 先只复现“可控 Launcher + 消息触发动作”两件事。\n2) 再加私有 app store 的“更新/安装”链路。\n3) 最后接入 Kotlin 状态面板与系统交互（通知/媒体/认证）。\n\n【验收清单】\n- 能通过消息触发手机端动作\n- 能通过消息触发 app 更新并一键安装\n- 能在手机看到主机关键运行状态\n- 能完成至少 3 类系统交互（语音/通知/媒体/指纹）\n\n【不建议】\n- 直接用“一条 Prompt”尝试复现全链路（会失败且难定位问题）",
       "sourceExtract": "i'm making an @openclaw phone 🤓 ◈ i made a fully custom launcher that can be fully controlled by openclaw and customizable via api, so it shows relevant things at all time ◈ i made my own mini play store that lives on my mac studio, so i can text my openclaw and it can make…"
     },
     {
