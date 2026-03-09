@@ -224,6 +224,22 @@ textarea { min-height: 120px; }
   font-size: 14px;
 }
 
+.detailWrap {
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: #f2f2ef;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0 18px;
+}
+.detailWrap .back,
+.detailWrap .detailCard {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
 .back {
   display: inline-block;
   color: #555;
@@ -233,7 +249,7 @@ textarea { min-height: 120px; }
   margin-bottom: 12px;
 }
 .detailCard {
-  max-width: 760px;
+  max-width: 1280px;
   margin: 0 auto;
   background: transparent;
   border: none;
@@ -249,11 +265,11 @@ textarea { min-height: 120px; }
   padding-top: 18px;
 }
 .detailHero {
-  background: #f6f6f3;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 18px 10px;
-  margin-bottom: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 10px 0 8px;
+  margin-bottom: 10px;
 }
 .detailCard h1 {
   margin: 0 0 8px;
