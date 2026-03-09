@@ -225,11 +225,6 @@ textarea { min-height: 120px; }
 }
 
 .detailWrap {
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  background: #f2f2ef;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
   padding: 12px 0 18px;
 }
 .detailWrap .back,
@@ -265,11 +260,21 @@ textarea { min-height: 120px; }
   padding-top: 18px;
 }
 .detailHero {
-  background: transparent;
-  border: none;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: #f2f2ef;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   border-radius: 0;
-  padding: 10px 0 8px;
-  margin-bottom: 10px;
+  padding: 12px 0 10px;
+  margin-bottom: 12px;
+}
+.detailHero > * {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 .detailCard h1 {
   margin: 0 0 8px;
