@@ -270,7 +270,7 @@ textarea { min-height: 120px; }
   margin-bottom: 12px;
 }
 .detailHero > * {
-  max-width: 1280px;
+  max-width: 980px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
@@ -295,12 +295,17 @@ textarea { min-height: 120px; }
   line-height: 1.6;
   margin-bottom: 12px;
 }
+.detailMeta p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.6;
+}
 .detailCard h3 {
   margin: 26px 0 10px;
   font-family: Inter, -apple-system, sans-serif;
   font-size: 18px;
 }
-.detailCard p, .detailCard li {
+.detailCard > p, .detailCard li {
   font-size: 20px;
   line-height: 1.74;
 }
