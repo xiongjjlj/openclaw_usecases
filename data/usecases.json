@@ -4,8 +4,8 @@
       "id": "uc_beeclaw_trading",
       "title": "BeeClaw：以 OpenClaw 为执行内核的交易 Bot",
       "summary": "BeeClaw 是 BeeTrade 发布的 OpenClaw 交易 Bot：既可在 beetrade.com 直接使用，也可通过 ClawHub 安装 skill 在自己的 OpenClaw 里复现。",
-      "problem": "原版本将其写成“通用 prompt 可复现”不准确。该案例核心是产品入口 + skill 安装链路，而不是纯提示词。",
-      "workflow": "1) 产品化入口：访问 beetrade.com，直接体验聊天触发交易执行。\n2) 开发者入口：在 ClawHub 安装 beetrade skill 到你的 OpenClaw。\n3) 完成鉴权（beecli auth login）后执行策略回测与实盘命令。\n4) 使用返回的结构化结果做策略迭代。",
+      "problem": "BeeClaw 解决的是“从策略想法到真实执行”的最后一公里：把交易指令放进可对话入口，统一执行与回执链路，避免手工操作造成的延迟、遗漏和不可追踪。其价值在于同时覆盖了产品侧（beetrade.com 可直接体验）与开发者侧（ClawHub 安装 skill 可私有复现），让同一套能力既能快速上手，也能深度定制。",
+      "workflow": "1) 产品入口：访问 beetrade.com，直接体验聊天触发交易执行。\n2) 开发者入口：在 ClawHub 安装 beetrade skill 到你的 OpenClaw。\n3) 完成鉴权（beecli auth login）后执行策略回测与实盘命令。\n4) 依据回执结果做策略迭代与风控调整。",
       "reproPrompt": "",
       "category": "交易与预测市场",
       "tools": [
