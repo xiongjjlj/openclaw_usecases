@@ -229,7 +229,7 @@ textarea { min-height: 120px; }
 }
 .detailWrap .back,
 .detailWrap .detailCard {
-  max-width: 1280px;
+  max-width: 980px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 24px;
@@ -269,7 +269,9 @@ textarea { min-height: 120px; }
   padding: 12px 0 10px;
   margin-bottom: 12px;
 }
-.detailHero > * {
+.detailHero .dTitle,
+.detailHero .dSummary,
+.detailHero .detailMeta {
   max-width: 980px;
   margin-left: auto;
   margin-right: auto;
