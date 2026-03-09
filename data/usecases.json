@@ -65,10 +65,10 @@
     {
       "id": "uc_phone",
       "title": "OpenClaw Phone Case",
-      "summary": "i'm making an @openclaw phone 🤓 ◈ i made a fully custom launcher that can be fully controlled by openclaw and customizable via api, so it shows relevant things …",
-      "problem": "OpenClaw Phone 解决的是移动场景下 Agent 入口不足的问题：让任务触发、状态回传和系统级交互在手机端闭环，支持日常高频使用。",
-      "workflow": "1) 在移动端部署并接入 OpenClaw。\n2) 打通消息/通知/触发词等入口。\n3) 扩展系统级能力（如 Launcher、状态面板）。\n4) 在真实日常场景中持续跑通并优化。",
-      "reproPrompt": "你是 OpenClaw，复现 OpenClaw Phone 场景工作流。\n- 支持手机侧触发任务（位置、拍照、通知、语音）。\n- 云端执行后将结果回传到同一会话线程。\n- 任务失败时返回可执行补救步骤。",
+      "summary": "ClawPhone / OpenClaw Phone 是“手机即 Agent 终端”的实战案例：在低成本手机上运行 OpenClaw，并进一步扩展到系统层可控（自定义 Launcher、mini app store、状态面板）。",
+      "problem": "核心痛点不是“能否聊天”，而是“移动端能否持续执行复杂任务并保持可运维”。该案例给出的是完整设备形态与系统改造链路。",
+      "workflow": "1) 在低成本 Android 设备上安装并运行 OpenClaw，验证基础可用。\n2) 接入系统层能力：自定义 Launcher，保证任务与上下文可常驻展示。\n3) 建立 mini app store 链路：通过 OpenClaw 文本指令触发应用生成/更新并一键安装。\n4) 增加原生状态面板：回传宿主机进程、容器、网络、服务状态。\n5) 在真实日常场景下连续运行并迭代。",
+      "reproPrompt": "",
       "category": "移动与可穿戴",
       "tools": [
         "nodes",
@@ -80,15 +80,16 @@
       ],
       "links": [
         "https://x.com/thekitze/status/2020236618851103204",
-        "https://x.com/marshallrichrds/status/2020034922304426237"
+        "https://x.com/marshallrichrds/status/2020034922304426237",
+        "https://x.com/marshallrichrds/status/2020041410079051963"
       ],
       "submittedBy": "bear",
       "createdAt": "2026-03-09T04:32:00.000Z",
-      "updatedAt": "2026-03-09T08:52:35Z",
+      "updatedAt": "2026-03-09T11:15:49Z",
       "sourceDate": "2026-02-07",
-      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
-      "reproMode": "manual-first（硬件+系统改造）",
-      "manualSteps": "1) 先按原帖视频搭建手机端与宿主机联动。\n2) 完成自定义 Launcher 与 mini app store 链路。\n3) 验证通知/短信/壁纸/状态面板等系统能力。\n4) 再把可自动化部分沉淀成 Prompt。",
+      "evidenceNote": "依据 ClawPhone 两条原帖与后续补充帖整理：$25 phone 部署 + 系统层改造（launcher/app-store/stats）。",
+      "reproMode": "manual-first（设备接入 + 系统改造）",
+      "manualSteps": "1) 先按原帖视频完成手机端部署与基础联通。\n2) 再做系统层改造（Launcher / 状态面板 / mini app store）。\n3) 最后才把稳定步骤抽象成自动化脚本。\n说明：该案例不是一条 Prompt 即可复现。",
       "sourceExtract": "i'm making an @openclaw phone 🤓 ◈ i made a fully custom launcher that can be fully controlled by openclaw and customizable via api, so it shows relevant things at all time ◈ i made my own mini play store that lives on my mac studio, so i can text my openclaw and it can make…"
     },
     {
