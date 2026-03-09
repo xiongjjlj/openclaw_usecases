@@ -248,6 +248,13 @@ textarea { min-height: 120px; }
   border-top: 1px solid var(--line);
   padding-top: 18px;
 }
+.detailHero {
+  background: #f6f6f3;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 18px 10px;
+  margin-bottom: 20px;
+}
 .detailCard h1 {
   margin: 0 0 8px;
   font-family: Inter, -apple-system, sans-serif;
