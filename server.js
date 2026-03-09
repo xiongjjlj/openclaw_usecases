@@ -1,0 +1,222 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { URL } = require('url');
+
+const parsedPort = Number.parseInt(process.env.PORT || '', 10);
+const parsedWebPort = Number.parseInt(process.env.WEB_PORT || '', 10);
+const PORT = Number.isFinite(parsedPort) ? parsedPort : (Number.isFinite(parsedWebPort) ? parsedWebPort : 8080);
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
+const DB_PATH = path.join(DATA_DIR, 'usecases.json');
+
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(DB_PATH)) {
+  fs.writeFileSync(DB_PATH, JSON.stringify({ usecases: [] }, null, 2));
+}
+
+const REQUIRED_USE_CASES = [
+  { id: 'uc_beeclaw_trading', title: 'BeeClaw：以 OpenClaw 为执行内核的交易 Bot', category: '交易与预测市场' },
+  { id: 'uc_mission_control', title: 'Mission Control：可视化运维 Case', category: '运维与部署' },
+  { id: 'uc_phone', title: 'OpenClaw Phone Case', category: '移动与可穿戴' },
+  { id: 'uc_bot_number', title: 'OpenClaw Bot：拥有号码并支持回复链路', category: '通信与号码 Bot' },
+  { id: 'uc_polymarket', title: 'Polymarket Case', category: '交易与预测市场' },
+  { id: 'uc_multi_cua', title: '多人协作 CUA：同频多代理 Case', category: '多代理协作' },
+  { id: 'uc_qualify_template', title: 'Qualify 的模板化部署', category: '运维与部署' },
+  { id: 'uc_visionclaw', title: 'VisionClaw：把 Agent 带进眼镜', category: '移动与可穿戴' }
+];
+
+function sendJson(res, code, payload) {
+  res.writeHead(code, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
+  res.end(JSON.stringify(payload));
+}
+
+function readDb() {
+  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+}
+
+function writeDb(db) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+function ensureRequiredUseCases() {
+  const db = readDb();
+  const now = new Date().toISOString();
+  let changed = false;
+  for (const uc of REQUIRED_USE_CASES) {
+    if (!db.usecases.find((x) => x.id === uc.id || x.title === uc.title)) {
+      db.usecases.push({
+        id: uc.id,
+        title: uc.title,
+        summary: `${uc.title} 的代表性案例，支持直接复现。`,
+        problem: '将复杂能力产品化并复用。',
+        workflow: '1) 场景定义 2) 任务编排 3) 执行验证 4) 复盘优化',
+        reproPrompt: `你是 OpenClaw。请复现案例：${uc.title}，并输出执行步骤、结果与复盘。`,
+        category: uc.category,
+        tools: [],
+        tags: [],
+        links: [],
+        submittedBy: 'bear',
+        createdAt: now,
+        updatedAt: now
+      });
+      changed = true;
+    }
+  }
+  if (changed) writeDb(db);
+}
+
+ensureRequiredUseCases();
+
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk;
+      if (raw.length > 2 * 1024 * 1024) {
+        reject(new Error('Payload too large'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch (e) {
+        reject(new Error('Invalid JSON'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function validateUseCase(payload) {
+  const required = ['title', 'summary', 'problem', 'workflow', 'reproPrompt'];
+  for (const key of required) {
+    if (!payload[key] || typeof payload[key] !== 'string' || !payload[key].trim()) {
+      return `${key} is required`;
+    }
+  }
+  if ((payload.title || '').length > 140) return 'title too long';
+  return null;
+}
+
+function staticFile(reqPath) {
+  const normalized = reqPath === '/' ? '/index.html' : reqPath;
+  const fullPath = path.join(PUBLIC_DIR, path.normalize(normalized));
+  if (!fullPath.startsWith(PUBLIC_DIR)) return null;
+  return fullPath;
+}
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png'
+};
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    return res.end();
+  }
+
+  if (url.pathname === '/api/health' && req.method === 'GET') {
+    return sendJson(res, 200, { ok: true, service: 'openclaw-usecase-hub' });
+  }
+
+  if (url.pathname === '/api/usecases' && req.method === 'GET') {
+    const db = readDb();
+    const q = (url.searchParams.get('q') || '').toLowerCase();
+    const tag = (url.searchParams.get('tag') || '').toLowerCase();
+    const category = (url.searchParams.get('category') || '').toLowerCase();
+    let list = [...db.usecases].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (q) {
+      list = list.filter((it) =>
+        [it.title, it.summary, it.problem, it.workflow, it.reproPrompt]
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    if (tag) {
+      list = list.filter((it) => (it.tags || []).some((t) => t.toLowerCase() === tag));
+    }
+    if (category) {
+      list = list.filter((it) => (it.category || '').toLowerCase() === category);
+    }
+
+    return sendJson(res, 200, { items: list, total: list.length });
+  }
+
+  if (url.pathname === '/api/usecases' && req.method === 'POST') {
+    try {
+      const payload = await parseBody(req);
+      const err = validateUseCase(payload);
+      if (err) return sendJson(res, 400, { ok: false, error: err });
+
+      const db = readDb();
+      const now = new Date().toISOString();
+      const item = {
+        id: `uc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        title: payload.title.trim(),
+        summary: payload.summary.trim(),
+        problem: payload.problem.trim(),
+        workflow: payload.workflow.trim(),
+        reproPrompt: payload.reproPrompt.trim(),
+        category: (payload.category || 'General').trim(),
+        tools: (payload.tools || '')
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean),
+        tags: (payload.tags || '')
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean),
+        links: (payload.links || '')
+          .split('\n')
+          .map((v) => v.trim())
+          .filter(Boolean),
+        submittedBy: (payload.submittedBy || 'anonymous-openclaw').trim(),
+        createdAt: now,
+        updatedAt: now
+      };
+
+      db.usecases.push(item);
+      writeDb(db);
+      return sendJson(res, 201, { ok: true, item });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, error: e.message });
+    }
+  }
+
+  const filePath = staticFile(url.pathname);
+  if (!filePath || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Not found');
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  res.writeHead(200, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Cache-Control': 'no-store, max-age=0'
+  });
+  fs.createReadStream(filePath).pipe(res);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`OpenClaw Use Case Hub running at http://0.0.0.0:${PORT}`);
+});

@@ -1,0 +1,13 @@
+{
+  "name": "openclaw-usecase-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OpenClaw Use Case Hub",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

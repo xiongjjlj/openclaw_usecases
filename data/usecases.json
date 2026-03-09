@@ -1,0 +1,238 @@
+{
+  "usecases": [
+    {
+      "id": "uc_beeclaw_trading",
+      "title": "BeeClaw：以 OpenClaw 为执行内核的交易 Bot",
+      "summary": "🎉🚀 BeeClaw - The First OpenClaw Trading Bot ! @openclaw 💬 Just chat. 🤖 Your agent executes. 🌐 Now live on https://t.co/LRytVW3F9s #beetrade #AgenticTrading #Bee…",
+      "problem": "将通用 Agent 能力落到交易执行场景时，通常缺乏稳定的入口-执行-反馈一体化链路。",
+      "workflow": "1) 聊天入口接收交易意图。\n2) 代理执行结构化交易动作。\n3) 返回执行结果并形成连续复盘。",
+      "reproPrompt": "你是 OpenClaw，复现 BeeClaw 交易 Bot 的可执行闭环。\n\n目标：从“信号 -> 决策 -> 下单 -> 风控 -> 复盘”全链路自动化。\n\n步骤：\n1. 接入信号源（市场数据/事件流），统一成标准信号结构。\n2. 策略判定：定义入场、加仓、减仓、止损、止盈条件。\n3. 执行前风控：仓位上限、单日亏损阈值、黑名单市场、滑点阈值。\n4. 触发执行并记录：下单参数、回执、成交详情。\n5. 生成复盘：胜率、收益/回撤、异常交易原因、参数调整建议。\n\n输出：\n- 今日执行摘要\n- 风险事件清单\n- 下一轮可执行优化项",
+      "category": "交易与预测市场",
+      "tools": [
+        "cron",
+        "browser",
+        "message"
+      ],
+      "tags": [
+        "trading",
+        "bot",
+        "long-run"
+      ],
+      "links": [
+        "https://x.com/BeeTradeHQ/status/2029080724121563316"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:30:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-03-08",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "prompt-first（可由 OpenClaw 主导）",
+      "manualSteps": "1) 填好环境变量/密钥。\n2) 执行 Prompt。\n3) 人工检查输出质量并迭代参数。",
+      "sourceExtract": "🎉🚀 BeeClaw - The First OpenClaw Trading Bot ! @openclaw 💬 Just chat. 🤖 Your agent executes. 🌐 Now live on https://t.co/LRytVW3F9s #beetrade #AgenticTrading #BeeClaw #OpenClaw #Trading https://t.co/cg1Wrnl7CR pic.twitter.com/1E27zaWA4N"
+    },
+    {
+      "id": "uc_mission_control",
+      "title": "Mission Control：可视化运维 Case",
+      "summary": "Prompt: Build me a mission control dashboard for my OpenClaw AI agent system. Stack: Next.js 15 (App Router) + Convex (real-time backend) + Tailwind CSS v4 + Fr…",
+      "problem": "多代理 24/7 运行时，状态分散、成本不透明、故障定位慢。",
+      "workflow": "1) 建立 Mission Control 看板集中观察 agent 状态与开销。\n2) 做任务分工与协调。\n3) 监控异常并执行恢复。",
+      "reproPrompt": "你是 OpenClaw，目标是复现「Mission Control：可视化运维」完整案例。\n\n【目标】\n构建一个可视化运维台，统一展示多节点健康、任务执行、异常告警，并支持基础恢复动作。\n\n【执行步骤】\n1) 数据采集\n- 拉取所有节点在线状态、CPU/内存/磁盘关键指标、最近任务状态。\n- 汇总最近24小时失败任务与错误摘要。\n\n2) 面板结构\n- 面板A：服务健康（Up/Down、延迟、错误率）\n- 面板B：任务队列（Running/Queued/Failed）\n- 面板C：异常告警（按严重程度排序）\n- 面板D：操作区（重试任务、重启服务、静默告警）\n\n3) 告警策略\n- 严重异常（服务离线/连续失败）立即推送消息。\n- 一般异常聚合后每30分钟摘要一次。\n\n4) 可执行动作\n- 提供：重试失败任务、重启指定服务、发送诊断摘要。\n- 每个动作必须写入操作日志（操作者、时间、结果）。\n\n5) 验证输出\n- 输出一个「当前状态快照」和「待处理异常清单」。\n- 若无异常，输出“系统稳定”并给出最近一次风险点。\n\n【交付格式】\n- 先给控制台摘要（5-10行）\n- 再给详细诊断（分模块）\n- 最后给下一步建议（最多3条，可直接执行）",
+      "category": "运维与部署",
+      "tools": [
+        "nodes",
+        "cron",
+        "message"
+      ],
+      "tags": [
+        "ops",
+        "dashboard"
+      ],
+      "links": [
+        "https://x.com/GoSailGlobal/status/2022529869050187828",
+        "https://x.com/ziwenxu_/status/2029023693154742608"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:31:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-03-04",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "semi-auto（看板搭建 + 人工治理）",
+      "manualSteps": "1) 接入节点与任务状态源。\n2) 先手动定义告警等级和处理SOP。\n3) 再启用自动重试/自动恢复动作。\n4) 每周人工复盘告警质量，调阈值。",
+      "sourceExtract": "Prompt: Build me a mission control dashboard for my OpenClaw AI agent system. Stack: Next.js 15 (App Router) + Convex (real-time backend) + Tailwind CSS v4 + Framer Motion + ShadCN UI + Lucide icons. TypeScript throughout. This is the command center where I monitor and control…"
+    },
+    {
+      "id": "uc_phone",
+      "title": "OpenClaw Phone Case",
+      "summary": "i'm making an @openclaw phone 🤓 ◈ i made a fully custom launcher that can be fully controlled by openclaw and customizable via api, so it shows relevant things …",
+      "problem": "桌面优先工作流在移动场景下触发和确认链路长、持续运行能力弱。",
+      "workflow": "1) 在手机端部署 OpenClaw。\n2) 接入短信/消息等移动入口。\n3) 扩展到自定义 Launcher 与私有 mini app store。",
+      "reproPrompt": "你是 OpenClaw，复现 OpenClaw Phone 场景工作流。\n- 支持手机侧触发任务（位置、拍照、通知、语音）。\n- 云端执行后将结果回传到同一会话线程。\n- 任务失败时返回可执行补救步骤。",
+      "category": "移动与可穿戴",
+      "tools": [
+        "nodes",
+        "message"
+      ],
+      "tags": [
+        "mobile",
+        "agent"
+      ],
+      "links": [
+        "https://x.com/thekitze/status/2020236618851103204",
+        "https://x.com/marshallrichrds/status/2020034922304426237"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:32:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-07",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "manual-first（硬件+系统改造）",
+      "manualSteps": "1) 先按原帖视频搭建手机端与宿主机联动。\n2) 完成自定义 Launcher 与 mini app store 链路。\n3) 验证通知/短信/壁纸/状态面板等系统能力。\n4) 再把可自动化部分沉淀成 Prompt。",
+      "sourceExtract": "i'm making an @openclaw phone 🤓 ◈ i made a fully custom launcher that can be fully controlled by openclaw and customizable via api, so it shows relevant things at all time ◈ i made my own mini play store that lives on my mac studio, so i can text my openclaw and it can make…"
+    },
+    {
+      "id": "uc_bot_number",
+      "title": "OpenClaw Bot：拥有号码并支持回复链路",
+      "summary": "YOUR AI AGENT JUST GOT A PHONE NUMBER AND CAN CALL YOU BACK https://t.co/w0k20oaO5W",
+      "problem": "仅聊天入口时，值班/提醒/异步确认等场景覆盖不足。",
+      "workflow": "1) 号码接入。\n2) 语音通道配置。\n3) 任务确认与进度回告。",
+      "reproPrompt": "你是 OpenClaw，复现“拥有号码并支持回复链路”的 Bot 案例。\n- 接收用户来信，识别意图并路由到对应工作流。\n- 保留上下文会话，确保可追溯。\n- 返回结构化结果与下一步建议。\n- 对高风险请求要求确认后再执行。",
+      "category": "通信与号码 Bot",
+      "tools": [
+        "message",
+        "voice_call"
+      ],
+      "tags": [
+        "bot",
+        "conversation"
+      ],
+      "links": [
+        "https://x.com/RoundtableSpace/status/2021203748618477943",
+        "https://x.com/scottjduffy/status/2018837091845902830"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:33:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-10",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "semi-auto（接入 + 自动路由）",
+      "manualSteps": "1) 完成号码/通道接入（短信或语音）。\n2) 配置意图路由规则与高风险确认。\n3) 用 10+ 条真实对话样本做人工验收。\n4) 再开启自动执行。",
+      "sourceExtract": "YOUR AI AGENT JUST GOT A PHONE NUMBER AND CAN CALL YOU BACK https://t.co/w0k20oaO5W"
+    },
+    {
+      "id": "uc_polymarket",
+      "title": "Polymarket Case",
+      "summary": "🚨BREAKING… the smartest 5m & 15m Polymarket Clawdbot setup just went public This is NOT bait and it’s not fabricated. If you’re trading on Polymarket, you NEED …",
+      "problem": "预测市场策略常停留在截图展示，缺少可复制框架与长期执行闭环。",
+      "workflow": "1) 基于公开策略框架设定执行节奏。\n2) 连接 Agent 自动化执行。\n3) 跟踪收益与风险反馈。",
+      "reproPrompt": "你是 OpenClaw，复现 Polymarket 机会扫描与风控辅助案例。\n1) 抓取重点市场与价格波动\n2) 标记异常波动与高讨论事件\n3) 关联新闻/社媒解释可能原因\n4) 输出“观察清单 + 风险提示 + 禁入条件”\n要求：仅给研究与决策支持，不直接给投资承诺。",
+      "category": "交易与预测市场",
+      "tools": [
+        "browser",
+        "web_search",
+        "cron"
+      ],
+      "tags": [
+        "polymarket",
+        "research"
+      ],
+      "links": [
+        "https://x.com/Shelpid_WI3M/status/2023415099243851893"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:34:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-17",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "prompt-first（可由 OpenClaw 主导）",
+      "manualSteps": "1) 填好环境变量/密钥。\n2) 执行 Prompt。\n3) 人工检查输出质量并迭代参数。",
+      "sourceExtract": "🚨BREAKING… the smartest 5m & 15m Polymarket Clawdbot setup just went public This is NOT bait and it’s not fabricated. If you’re trading on Polymarket, you NEED to pay attention to this. He began with a small base, engineered a fully autonomous system, and turned it into a… https://t.co/EdJBOA8vIk pic.twitter.com/pDktlwoBWj"
+    },
+    {
+      "id": "uc_multi_cua",
+      "title": "多人协作 CUA：同频多代理 Case",
+      "summary": "Yesterday we demoed the very first multi-player computer-use agent at @openclaw ClawCon, in front of @steipete @aplusk @RayFernando1337 @theo @swyx and a 700+ c…",
+      "problem": "单代理执行复杂 computer-use 任务时吞吐低，跨任务协调成本高。",
+      "workflow": "1) 多代理并行执行。\n2) 每代理独立桌面/窗口。\n3) 汇总协作结果。",
+      "reproPrompt": "你是 OpenClaw，复现“多人协作 CUA 同频多代理”案例。\n- 将复杂任务拆成并行子任务（采集/执行/验证）。\n- 每个子代理输出中间结果到统一汇总层。\n- 中控代理做冲突检查、去重与最终交付。\n- 若任一子任务失败，自动重试1次并标注风险。\n输出：总结果、失败点、人工接管建议。",
+      "category": "多代理协作",
+      "tools": [
+        "sessions_spawn",
+        "browser",
+        "canvas"
+      ],
+      "tags": [
+        "multi-agent",
+        "cua"
+      ],
+      "links": [
+        "https://x.com/francedot/status/2019496082477076496"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:35:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-06",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "prompt-first（可由 OpenClaw 主导）",
+      "manualSteps": "1) 填好环境变量/密钥。\n2) 执行 Prompt。\n3) 人工检查输出质量并迭代参数。",
+      "sourceExtract": "Yesterday we demoed the very first multi-player computer-use agent at @openclaw ClawCon, in front of @steipete @aplusk @RayFernando1337 @theo @swyx and a 700+ crowd with 20k watching online. Read more about how and why we built it. https://t.co/klw651b9Rq"
+    },
+    {
+      "id": "uc_qualify_template",
+      "title": "Qualify 的模板化部署",
+      "summary": "Just launched Openclaw 🚀 (formerly ClawdBot) — a ready-to-use Coolify template to spin up your bot infra faster. Give it a shot and let me know what you think 👀…",
+      "problem": "部署链路复杂导致新用户和团队试跑成本高。",
+      "workflow": "1) 使用 ready-to-use 模板拉起基础设施。\n2) 配置最小必要参数。\n3) 一键部署并校验可用性。",
+      "reproPrompt": "你是 OpenClaw，复现 Qualify 的模板化部署。\n1) 提取部署模板（环境变量、依赖、启动、健康检查）\n2) 参数化（环境名/域名/密钥）\n3) 一键部署并自动验证\n4) 输出部署结果与回滚指引",
+      "category": "运维与部署",
+      "tools": [
+        "exec",
+        "cron"
+      ],
+      "tags": [
+        "deployment",
+        "template"
+      ],
+      "links": [
+        "https://x.com/essamamdani/status/2017235432401224185"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:36:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-16",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "prompt-first（可由 OpenClaw 主导）",
+      "manualSteps": "1) 填好环境变量/密钥。\n2) 执行 Prompt。\n3) 人工检查输出质量并迭代参数。",
+      "sourceExtract": "Just launched Openclaw 🚀 (formerly ClawdBot) — a ready-to-use Coolify template to spin up your bot infra faster. Give it a shot and let me know what you think 👀https://t.co/ooHt353SDW"
+    },
+    {
+      "id": "uc_visionclaw",
+      "title": "VisionClaw：把 Agent 带进眼镜",
+      "summary": "AI agents went from Discord bots to living in your glasses. Visionclaw just dropped - OpenClaw agent that runs on your Meta glasses. - Sees what you see in real…",
+      "problem": "现实场景中需要低延迟、持续在线的人机协作入口。",
+      "workflow": "1) 可穿戴设备提供实时视觉/语音输入。\n2) Agent 做场景理解与意图识别。\n3) 触发任务并回传结果。",
+      "reproPrompt": "你是 OpenClaw，复现 VisionClaw（眼镜场景 Agent）案例。\n1) 接收眼镜侧输入（图像/语音/触发词）\n2) 实时理解当前场景与用户意图\n3) 触发对应任务流（检索/记录/提醒/执行）\n4) 通过语音或消息回传结果\n要求：时延可控、回复简洁、关键动作需二次确认。",
+      "category": "移动与可穿戴",
+      "tools": [
+        "nodes",
+        "tts",
+        "message"
+      ],
+      "tags": [
+        "vision",
+        "wearable"
+      ],
+      "links": [
+        "https://x.com/RoundtableSpace/status/2020499105257034130",
+        "https://x.com/tmel0211/status/2020750308054556714"
+      ],
+      "submittedBy": "bear",
+      "createdAt": "2026-03-09T04:37:00.000Z",
+      "updatedAt": "2026-03-09T07:33:23Z",
+      "sourceDate": "2026-02-08",
+      "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
+      "reproMode": "manual-first（可穿戴接入）",
+      "manualSteps": "1) 准备眼镜侧输入链路（图像/语音）。\n2) 打通设备到 OpenClaw 的实时传输。\n3) 配置意图识别与任务触发映射。\n4) 人工做延迟、误触发、确认机制测试。\n5) 用“观察→理解→行动”场景回归验收。",
+      "sourceExtract": "AI agents went from Discord bots to living in your glasses. Visionclaw just dropped - OpenClaw agent that runs on your Meta glasses. - Sees what you see in real time - Hears conversations Image - Acts autonomously using Gemini Live - 100% opensource Your AI agent is literally… pic.twitter.com/MiSC6yEDgP"
+    }
+  ]
+}
