@@ -169,9 +169,26 @@ async function renderDetail(id) {
   node.querySelector('.dSummary').textContent = item.summary;
   node.querySelector('.dProblem').textContent = item.problem;
   node.querySelector('.dWorkflow').textContent = item.workflow;
-  node.querySelector('.dPrompt').textContent = item.reproPrompt;
   node.querySelector('.dReproMode').textContent = item.reproMode || 'semi-auto（部分自动 + 人工步骤）';
-  node.querySelector('.dManual').textContent = item.manualSteps || '该案例可主要通过 Prompt 自动复现，无额外手动步骤。';
+
+  const promptEl = node.querySelector('.dPrompt');
+  const promptTitle = promptEl.previousElementSibling;
+  if (item.reproPrompt && item.reproPrompt.trim()) {
+    promptEl.textContent = item.reproPrompt;
+  } else {
+    promptTitle.style.display = 'none';
+    promptEl.style.display = 'none';
+    node.querySelector('.copyBtn').style.display = 'none';
+  }
+
+  const manualEl = node.querySelector('.dManual');
+  const manualTitle = manualEl.previousElementSibling;
+  if (item.manualSteps && item.manualSteps.trim()) {
+    manualEl.textContent = item.manualSteps;
+  } else {
+    manualTitle.style.display = 'none';
+    manualEl.style.display = 'none';
+  }
 
   const meta = node.querySelector('.detailMeta');
   meta.innerHTML = `
@@ -187,13 +204,6 @@ async function renderDetail(id) {
     li.innerHTML = `<a href="${esc(l)}" target="_blank" rel="noreferrer">${esc(l)}</a>`;
     ul.appendChild(li);
   });
-  const sourceText = [
-    item.sourceDate ? `来源日期：${esc(item.sourceDate)}` : '',
-    item.evidenceNote ? `说明：${esc(item.evidenceNote)}` : ''
-  ].filter(Boolean).join('；');
-  node.querySelector('.dSource').textContent = sourceText || '未标注来源说明';
-  node.querySelector('.dExtract').textContent = item.sourceExtract || '未抓取到原帖正文摘录（链接可能受平台限制）。';
-
   node.querySelector('.copyBtn').addEventListener('click', async () => {
     await navigator.clipboard.writeText(item.reproPrompt);
     alert('Prompt 已复制');

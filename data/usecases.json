@@ -3,10 +3,10 @@
     {
       "id": "uc_beeclaw_trading",
       "title": "BeeClaw：以 OpenClaw 为执行内核的交易 Bot",
-      "summary": "🎉🚀 BeeClaw - The First OpenClaw Trading Bot ! @openclaw 💬 Just chat. 🤖 Your agent executes. 🌐 Now live on https://t.co/LRytVW3F9s #beetrade #AgenticTrading #Bee…",
-      "problem": "将通用 Agent 能力落到交易执行场景时，通常缺乏稳定的入口-执行-反馈一体化链路。",
-      "workflow": "1) 聊天入口接收交易意图。\n2) 代理执行结构化交易动作。\n3) 返回执行结果并形成连续复盘。",
-      "reproPrompt": "你是 OpenClaw，复现 BeeClaw 交易 Bot 的可执行闭环。\n\n目标：从“信号 -> 决策 -> 下单 -> 风控 -> 复盘”全链路自动化。\n\n步骤：\n1. 接入信号源（市场数据/事件流），统一成标准信号结构。\n2. 策略判定：定义入场、加仓、减仓、止损、止盈条件。\n3. 执行前风控：仓位上限、单日亏损阈值、黑名单市场、滑点阈值。\n4. 触发执行并记录：下单参数、回执、成交详情。\n5. 生成复盘：胜率、收益/回撤、异常交易原因、参数调整建议。\n\n输出：\n- 今日执行摘要\n- 风险事件清单\n- 下一轮可执行优化项",
+      "summary": "BeeClaw 是 BeeTrade 发布的 OpenClaw 交易 Bot：既可在 beetrade.com 直接使用，也可通过 ClawHub 安装 skill 在自己的 OpenClaw 里复现。",
+      "problem": "原版本将其写成“通用 prompt 可复现”不准确。该案例核心是产品入口 + skill 安装链路，而不是纯提示词。",
+      "workflow": "1) 产品化入口：访问 beetrade.com，直接体验聊天触发交易执行。\n2) 开发者入口：在 ClawHub 安装 beetrade skill 到你的 OpenClaw。\n3) 完成鉴权（beecli auth login）后执行策略回测与实盘命令。\n4) 使用返回的结构化结果做策略迭代。",
+      "reproPrompt": "",
       "category": "交易与预测市场",
       "tools": [
         "cron",
@@ -19,15 +19,17 @@
         "long-run"
       ],
       "links": [
-        "https://x.com/BeeTradeHQ/status/2029080724121563316"
+        "https://x.com/BeeTradeHQ/status/2029080724121563316",
+        "https://beetrade.com",
+        "https://clawhub.ai"
       ],
       "submittedBy": "bear",
       "createdAt": "2026-03-09T04:30:00.000Z",
-      "updatedAt": "2026-03-09T07:33:23Z",
+      "updatedAt": "2026-03-09T08:43:21Z",
       "sourceDate": "2026-03-08",
       "evidenceNote": "按原帖正文提取（X oEmbed），避免主观改写。",
-      "reproMode": "prompt-first（可由 OpenClaw 主导）",
-      "manualSteps": "1) 填好环境变量/密钥。\n2) 执行 Prompt。\n3) 人工检查输出质量并迭代参数。",
+      "reproMode": "install-first（ClawHub / BeeTrade Web）",
+      "manualSteps": "路径 A（产品使用）：\n- 打开 https://beetrade.com 并按页面引导体验。\n\n路径 B（本地复现）：\n- 在 ClawHub 安装 beetrade skill（参考帖子中的 ClawHub 链接）。\n- 终端执行：clawhub install beetrade\n- 完成鉴权：beecli auth login\n- 策略回测：beecli strategies backtest my-strategy\n- 策略实盘：beecli strategies live my-strategy\n\n说明：该案例复现重点是安装与接入链路，不是单条 Prompt。",
       "sourceExtract": "🎉🚀 BeeClaw - The First OpenClaw Trading Bot ! @openclaw 💬 Just chat. 🤖 Your agent executes. 🌐 Now live on https://t.co/LRytVW3F9s #beetrade #AgenticTrading #BeeClaw #OpenClaw #Trading https://t.co/cg1Wrnl7CR pic.twitter.com/1E27zaWA4N"
     },
     {
