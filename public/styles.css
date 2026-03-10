@@ -114,6 +114,18 @@ nav a:hover { color: #000; }
   gap: 10px;
   justify-content: flex-end;
 }
+.viewBtn {
+  height: 32px;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  padding: 0 10px;
+  font-family: Inter, -apple-system, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+.viewBtn:hover { border-color: #bfc0b9; }
 .tabs {
   width: 100%;
   display: flex;

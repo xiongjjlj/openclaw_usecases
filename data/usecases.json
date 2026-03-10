@@ -7,7 +7,7 @@
       "problem": "BeeClaw 解决的是“交易想法到真实执行”的断层问题：它把聊天入口、策略执行、回执反馈和后续复盘串成一条连续链路，让交易自动化从概念演示走向可持续使用。",
       "workflow": "1) 通过 beetrade.com 直接体验聊天触发交易执行。\n2) 通过 ClawHub 安装 beetrade skill 到 OpenClaw。\n3) 完成鉴权后运行回测与实盘策略。\n4) 基于回执和结果迭代策略与风控。",
       "reproPrompt": "",
-      "category": "交易与预测市场",
+      "category": "研究与交易",
       "tools": [
         "cron",
         "browser",
@@ -39,7 +39,7 @@
       "problem": "多代理运行常见问题是状态不可见、协同弱、故障与成本难以及时发现和处置。",
       "workflow": "1) 构建实时看板并汇总代理/任务状态。\n2) 统一监控并识别异常。\n3) 执行控制动作（任务/服务层）。\n4) 基于可视化反馈持续优化效率与成本。",
       "reproPrompt": "Build a mission control dashboard for OpenClaw agents with Next.js 15 + Convex + Tailwind v4 + Framer Motion + ShadCN + Lucide + TypeScript. Focus on monitor-and-control workflows and realtime status.",
-      "category": "运维与部署",
+      "category": "运维与自动化",
       "tools": [
         "nodes",
         "cron",
@@ -69,7 +69,7 @@
       "problem": "这个案例要解决的核心不是“能不能在手机上聊天”，而是“如何让 OpenClaw 持续控制和改造手机系统行为”。原帖里给的是完整系统改造清单：\n- 自定义 Launcher 由 OpenClaw 经 API 全局控制\n- 私有 mini app store（驻留在 Mac Studio）支持通过发消息触发新 App 生成与现有 App 更新，一键安装\n- 原生 Kotlin 状态面板汇总宿主机进程/容器/dev server/tailscale/traefik/expo/kotlin 等状态\n- 根据天气/位置/todo/日程/生日等上下文自动生成并设置壁纸\n- 支持语音对话、读取通知/短信、播放媒体、弹出选项表单、请求指纹认证",
       "workflow": "阶段 A：设备与控制面\n1) 在 Android 设备部署 OpenClaw Phone 基础运行环境。\n2) 搭建并接入“可被 API 全控”的自定义 Launcher。\n\n阶段 B：应用与状态闭环\n3) 在 Mac Studio 侧搭建私有 mini app store，并打通“发消息 -> 生成/更新 App -> 一键安装”。\n4) 开发原生 Kotlin 状态面板，实时展示主机与服务运行状态。\n\n阶段 C：个性化与交互能力\n5) 接入上下文信号（天气/位置/todo/事件/生日），自动生成并设置壁纸。\n6) 打通语音、通知/短信读取、媒体控制、表单选择、指纹确认等交互能力。\n\n阶段 D：验证与运营\n7) 用真实日常任务连续跑 3-7 天，记录稳定性、误触发、交互延迟并迭代。",
       "reproPrompt": "",
-      "category": "移动与可穿戴",
+      "category": "移动与硬件",
       "tools": [
         "nodes",
         "message"
@@ -99,7 +99,7 @@
       "problem": "很多 Agent 仅单向推送，用户确认与执行容易脱节；号码链路把来电、回呼、追问放进同一入口。",
       "workflow": "1) 绑定可呼入/呼出的号码通道。\n2) 建立来电号码与用户/任务上下文映射。\n3) 通话中支持状态查询与下一步指令。\n4) 高风险动作加确认门槛。\n5) 通过同号码回传结果形成闭环记录。",
       "reproPrompt": "你是 OpenClaw，复现“AI Agent 拥有电话号码并可回呼”的案例：识别来电用户并关联上下文，支持任务状态查询与下一步建议，高风险操作先确认后执行，通话结束后输出结构化记录。",
-      "category": "通信与号码 Bot",
+      "category": "办公与效率",
       "tools": [
         "message",
         "voice_call"
@@ -128,7 +128,7 @@
       "problem": "预测市场变化快、噪音高，人工盯盘与手工响应滞后，难以稳定产出研究结论。",
       "workflow": "1) 定时抓取市场/价格/盘口数据。\n2) 识别短时波动与异常。\n3) 关联新闻/社媒做原因假设并标注证据。\n4) 输出观察清单、风险提示、禁入条件。\n5) 日终复盘并调整阈值。",
       "reproPrompt": "你是 OpenClaw。构建 Polymarket 研究助手：每5分钟抓取重点市场数据，标记异常并关联外部信息，输出《观察清单》《风险提示》《禁入条件》，明确仅用于研究辅助。",
-      "category": "交易与预测市场",
+      "category": "研究与交易",
       "tools": [
         "browser",
         "web_search",
@@ -159,7 +159,7 @@
       "problem": "传统 computer-use agent 往往独占单桌面，用户需要等待，难以并行多任务。",
       "workflow": "1) 为每个代理启动独立容器与桌面。\n2) 代理通过 computer-use 工具执行 screenshot/click/type 等动作。\n3) 宿主侧回传窗口流并执行动作。\n4) 多代理并行运行，人工可随时介入任一窗口。",
       "reproPrompt": "目标：复现 multi-player computer-use。准备 Node18+、Docker、Xpra；启动至少2个独立 agent sandbox 并行执行不同任务，验证每个代理独立窗口/光标且人工可介入。输出冲突与失败日志。",
-      "category": "多代理协作",
+      "category": "开发与构建",
       "tools": [
         "sessions_spawn",
         "browser",
@@ -190,7 +190,7 @@
       "problem": "手工部署步骤多且容易遗漏，导致新用户和团队试跑成本高、环境一致性差。",
       "workflow": "1) 使用现成模板初始化部署。\n2) 填充必要环境参数。\n3) 启动服务并执行健康检查。\n4) 输出标准化部署记录，便于复用与回滚。",
       "reproPrompt": "",
-      "category": "运维与部署",
+      "category": "运维与自动化",
       "tools": [
         "exec",
         "cron"
@@ -218,7 +218,7 @@
       "problem": "该案例关注“现实世界输入到可执行 Agent 流程”的链路问题：眼镜侧所见所闻需要被实时理解并触发后续任务。",
       "workflow": "1) 从眼镜侧采集视觉与语音输入。\n2) 进行场景与意图识别。\n3) 通过 OpenClaw 路由到查询/记录/提醒等动作。\n4) 语音或消息回传结果，并对高风险动作做确认。",
       "reproPrompt": "你是 OpenClaw，复现 VisionClaw（智能眼镜）场景：接收实时视觉与语音输入，完成场景理解与意图识别，触发对应任务并返回结果；关键动作执行前必须二次确认。",
-      "category": "移动与可穿戴",
+      "category": "移动与硬件",
       "tools": [
         "nodes",
         "tts",

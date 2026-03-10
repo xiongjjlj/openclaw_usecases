@@ -27,7 +27,7 @@ function route() {
 }
 
 function renderCategoryTabs(container, allItems, onChange) {
-  const preferred = ['交易与预测市场', '运维与部署', '移动与可穿戴', '通信与号码 Bot', '多代理协作'];
+  const preferred = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建'];
   const existed = [...new Set(allItems.map((x) => x.category || 'General'))];
   const ordered = [...preferred.filter((x) => existed.includes(x)), ...existed.filter((x) => !preferred.includes(x))];
   const categories = ['全部', ...ordered];
@@ -46,7 +46,6 @@ function renderCategoryTabs(container, allItems, onChange) {
 
 function renderSortTabs(container, onChange) {
   const sorts = [
-    { key: 'trending', label: 'Trending' },
     { key: 'popular', label: 'Popular' },
     { key: 'new', label: 'New' }
   ];
@@ -88,9 +87,6 @@ function trendingScore(item) {
 function sortUseCases(list) {
   if (currentSort === 'new') {
     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }
-  if (currentSort === 'trending') {
-    return [...list].sort((a, b) => trendingScore(b) - trendingScore(a));
   }
   return [...list].sort((a, b) => popularScore(b) - popularScore(a));
 }
