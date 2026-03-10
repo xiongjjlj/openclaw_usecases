@@ -3,8 +3,54 @@ let cache = [];
 let currentCategory = '';
 let currentSort = 'popular';
 let currentView = 'grid';
+
+const ADMIN_TOKEN_KEY = 'clawcase_admin_token';
+
+function getAdminToken() {
+  return (localStorage.getItem(ADMIN_TOKEN_KEY) || '').trim();
+}
+
+function setAdminToken(token) {
+  if (token && token.trim()) localStorage.setItem(ADMIN_TOKEN_KEY, token.trim());
+}
+
+async function adminFetch(url, options = {}) {
+  const token = getAdminToken();
+  const headers = { ...(options.headers || {}), 'x-admin-token': token };
+  return fetch(url, { ...options, headers });
+}
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
+
+
+function isConnected() {
+  return localStorage.getItem('clawcase_connected') === '1' || Boolean(agentSessionToken);
+}
+
+function applyConnectionLabels() {
+  const navSubmitLink = document.getElementById('navSubmitLink');
+  if (navSubmitLink) {
+    if (isConnected()) {
+      navSubmitLink.textContent = '☑️ 已连接OpenClaw';
+      navSubmitLink.setAttribute('href', '#/submit');
+      navSubmitLink.classList.add('connectBtn');
+    } else {
+      navSubmitLink.textContent = '连接 OpenClaw，提交 UseCase';
+      navSubmitLink.setAttribute('href', '#/connect');
+      navSubmitLink.classList.add('connectBtn');
+    }
+  }
+  const heroBtn = document.getElementById('heroConnectSubmitBtn');
+  if (heroBtn) {
+    if (isConnected()) {
+      heroBtn.textContent = '☑️ 已连接OpenClaw';
+      heroBtn.setAttribute('href', '#/submit');
+    } else {
+      heroBtn.textContent = '连接 OpenClaw，提交 UseCase';
+      heroBtn.setAttribute('href', '#/connect');
+    }
+  }
+}
 
 function fmtDate(s) {
   return new Date(s).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
@@ -22,6 +68,7 @@ async function getUseCases(q = '', tag = '', category = '') {
 }
 
 function route() {
+  applyConnectionLabels();
   const hash = location.hash || '#/';
   const [, , id] = hash.match(/^#\/(|usecase\/([^/]+)|submit|admin)$/) || [];
   if (hash.startsWith('#/usecase/')) return renderDetail(id);
@@ -108,6 +155,7 @@ async function renderHome() {
   app.innerHTML = '';
   const node = document.getElementById('homeTpl').content.cloneNode(true);
   app.appendChild(node);
+  applyConnectionLabels();
 
   const grid = document.getElementById('grid');
   const searchInput = document.getElementById('searchInput');
@@ -356,6 +404,7 @@ function renderSubmit() {
 }
 
 window.addEventListener('hashchange', route);
+applyConnectionLabels();
 route();
 
 function renderConnect() {
@@ -376,7 +425,9 @@ function renderConnect() {
       const data = await res.json();
       statusEl.textContent = `状态：${data.status || 'pending'}`;
       if (data.status === 'linked') {
+        localStorage.setItem('clawcase_connected', '1');
         clearInterval(timer);
+        applyConnectionLabels();
       }
     }, 2500);
   }
@@ -403,15 +454,39 @@ async function renderAdmin() {
   const listBox = document.getElementById('adminList');
   const statusFilter = document.getElementById('adminStatus');
   const refreshBtn = document.getElementById('adminRefresh');
+  const loginBtn = document.getElementById('adminLoginBtn');
+  const logoutBtn = document.getElementById('adminLogoutBtn');
+
+  async function ensureAuth() {
+    let token = getAdminToken();
+    if (!token) {
+      token = prompt('请输入 Admin 访问口令');
+      if (!token) return false;
+      setAdminToken(token);
+    }
+
+    const check = await adminFetch('/api/admin/auth-check');
+    if (check.ok) return true;
+
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    alert('Admin 鉴权失败，请重新输入口令');
+    return false;
+  }
 
   async function load() {
     statBox.textContent = '加载中...';
     listBox.innerHTML = '<p class="statusLoading">加载中...</p>';
 
     const [statsRes, listRes] = await Promise.all([
-      fetch('/api/admin/stats'),
-      fetch(`/api/admin/reviews?limit=50${statusFilter.value ? `&status=${encodeURIComponent(statusFilter.value)}` : ''}`)
+      adminFetch('/api/admin/stats'),
+      adminFetch(`/api/admin/reviews?limit=50${statusFilter.value ? `&status=${encodeURIComponent(statusFilter.value)}` : ''}`)
     ]);
+
+    if (statsRes.status === 401 || listRes.status === 401) {
+      statBox.textContent = '未授权';
+      listBox.innerHTML = '<p class="statusError">你没有访问后台的权限</p>';
+      return;
+    }
 
     const stats = await statsRes.json();
     const listData = await listRes.json();
@@ -442,7 +517,28 @@ async function renderAdmin() {
     `).join('');
   }
 
+  loginBtn.addEventListener('click', async () => {
+    const token = prompt('输入 Admin 访问口令');
+    if (!token) return;
+    setAdminToken(token);
+    const ok = await ensureAuth();
+    if (ok) await load();
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    statBox.textContent = '已退出';
+    listBox.innerHTML = '<p class="statusEmpty">请重新登录后台</p>';
+  });
+
   refreshBtn.addEventListener('click', load);
   statusFilter.addEventListener('change', load);
+
+  const authed = await ensureAuth();
+  if (!authed) {
+    statBox.textContent = '未登录';
+    listBox.innerHTML = '<p class="statusEmpty">请先登录后台</p>';
+    return;
+  }
   await load();
 }

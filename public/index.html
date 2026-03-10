@@ -12,9 +12,8 @@
       <a class="brand" href="#/">Clawcase</a>
       <nav>
         <a href="#/">发现</a>
-        <a href="#/submit">提交用例</a>
+        <a id="navSubmitLink" href="#/submit">提交用例</a>
         <a href="#/admin">后台</a>
-        <a class="connectBtn" href="#/connect">连接 OpenClaw</a>
       </nav>
     </header>
 
@@ -25,7 +24,7 @@
         <h1>Clawcase</h1>
         <p>Discover and reproduce real OpenClaw use cases.</p>
         <div class="heroActions">
-          <a class="btn" href="#/submit">提交你的 Use Case</a>
+          <a id="heroConnectSubmitBtn" class="btn" href="#/connect">连接 OpenClaw，提交 UseCase</a>
         </div>
       </section>
 
@@ -152,7 +151,7 @@
         <article class="submitCard">
           <h2>后台审核工作台</h2>
           <p id="adminStats">加载中...</p>
-          <div class="filterBar" style="margin:12px 0 16px 0;">
+          <div class="filterBar" style="margin:12px 0 16px 0; gap:8px; flex-wrap:wrap;">
             <select id="adminStatus">
               <option value="">全部状态</option>
               <option value="pending_review">pending_review</option>
@@ -162,6 +161,8 @@
               <option value="published">published</option>
             </select>
             <button class="btn" id="adminRefresh" type="button">刷新</button>
+            <button class="btn" id="adminLoginBtn" type="button">登录后台</button>
+            <button class="btn" id="adminLogoutBtn" type="button">退出</button>
           </div>
           <section id="adminList" class="listContainer"></section>
         </article>
