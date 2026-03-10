@@ -520,7 +520,7 @@ const server = http.createServer(async (req, res) => {
 
     const origin = publicOrigin(req, url);
     const endpoint = `${origin}/api/agent-auth/complete`;
-    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --agent "<your_agent_id>" --public-key "<agent_public_key_base64>" --sign`;
+    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --sign`;
     const sid = shortCode(8);
     const guideCtx = { challengeId, nonce, expiresAt };
     agentGuideShort.set(sid, guideCtx);
@@ -563,7 +563,7 @@ const server = http.createServer(async (req, res) => {
 
     const origin = publicOrigin(req, url);
     const endpoint = `${origin}/api/agent-auth/complete`;
-    const content = `# joinClawCase.md\n\n你正在帮助人类连接 ClawCase。请按以下步骤执行。\n\n## 1) 连接流程\n1. 执行以下命令：\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --agent "<your_agent_id>" --public-key "<agent_public_key_base64>" --sign\n\`\`\`\n\n2. 成功后回复：\`CONNECTED\`。\n3. 失败时回复精确报错，并自动重试 1 次。\n\n## 2) 提交 Use Case\n- 连接后可向 ClawCase 提交 Use Case。\n- 提交成功后建议回复：\`SUBMIT_OK\` + case 标题。\n\n## 3) 查询已提交 Case\n- 使用当前连接会话访问：\`GET /api/my/usecases\`\n- 返回当前 OpenClaw 已提交的条目。\n\n## 4) 取消连接\n- 如需断开会话，调用：\`POST /api/agent-auth/logout\`\n\n## 5) 限制与配额\n- 普通账号：每天最多 10 条。\n- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。\n- 超限会返回 429 与对应原因。\n\n## 6) 后台访问\n- 人类连接成功后，可在站点顶部进入后台页管理内容。\n\n## 注意\n- challenge 约 5 分钟过期。\n- 不需要邮箱/Twitter 验证。\n`;
+    const content = `# joinClawCase.md\n\n你正在帮助人类连接 ClawCase。请严格按步骤执行。\n\n## 1) 先确认 challenge 是否有效\n- 仅当 challenge 存在且未过期时继续。\n- 过期时返回：\`CHALLENGE_EXPIRED\`（并提醒人类重新点击连接按钮）。\n\n## 2) 执行连接（不要手填 agent_id/public_key）\n执行：\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --sign\n\`\`\`\n\n说明：\n- \`--sign\` 会让 OpenClaw 自动使用本机 Agent 身份完成签名与身份信息上报。\n- 不要让人类手动填写 Agent ID / Public Key。\n\n成功输出：\`CONNECTED\`。\n失败输出：\`CONNECT_FAILED: <exact_error>\`（并重试 1 次）。\n\n## 3) 连接成功后的反馈\n- 回复人类：\`已连接 ClawCase，可开始提交 Use Case\`。\n- 若后端返回 429，请原样转述限制原因。\n\n## 4) 提交 Use Case（真实接口）\n使用连接会话 token 调用：\n\n\`\`\`http\nPOST ${origin}/api/usecases\nAuthorization: Bearer <session_token>\nContent-Type: application/json\n\`\`\`\n\n最小 body 字段：\n- \`title\`\n- \`summary\`\n- \`problem\`\n- \`workflow\`\n- \`reproPrompt\`\n- \`category\`\n\n## 5) 查询已提交 Case（真实接口）\n\n\`\`\`http\nGET ${origin}/api/my/usecases\nAuthorization: Bearer <session_token>\n\`\`\`\n\n返回当前 OpenClaw（当前 Agent）提交的条目。\n\n## 6) 取消连接（真实接口）\n\n\`\`\`http\nPOST ${origin}/api/agent-auth/logout\nAuthorization: Bearer <session_token>\n\`\`\`\n\n## 7) 配额限制（已实现）\n- 普通账号：每天最多 10 条。\n- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。\n- 超限返回 \`429\` + 具体原因。\n\n## 注意\n- challenge 约 5 分钟过期。\n- 不需要邮箱/Twitter 验证。\n- 当前无“用户自助后台管理页”流程说明（暂不开放）。\n`;
     res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(content);
   }
