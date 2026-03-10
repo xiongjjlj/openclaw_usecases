@@ -24,6 +24,8 @@ const linkSessions = new Map();
 const agentChallenges = new Map();
 const agentGuideShort = new Map();
 const agentSessions = new Map();
+const agentProfiles = new Map();
+const agentSubmitLog = new Map();
 
 const REQUIRED_USE_CASES = [
   { id: 'uc_beeclaw_trading', title: 'BeeClaw：以 OpenClaw 为执行内核的交易 Bot', category: '交易与预测市场' },
@@ -394,8 +396,52 @@ function parseBearer(req) {
 function issueAgentSession(agentId) {
   const token = randomId('agtok');
   const expiresAt = Date.now() + 30 * 60 * 1000;
-  agentSessions.set(token, { agentId, expiresAt, createdAt: Date.now() });
+  const now = Date.now();
+  agentSessions.set(token, { agentId, expiresAt, createdAt: now });
+  if (!agentProfiles.has(agentId)) {
+    agentProfiles.set(agentId, { firstSeenAt: now });
+  }
   return { token, expiresAt };
+}
+
+function getAgentQuotaState(agentId) {
+  const now = Date.now();
+  const oneHourAgo = now - 60 * 60 * 1000;
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const dayStartMs = dayStart.getTime();
+
+  const profile = agentProfiles.get(agentId) || { firstSeenAt: now };
+  const isNew = now - profile.firstSeenAt < 24 * 60 * 60 * 1000;
+  const logs = (agentSubmitLog.get(agentId) || []).filter((ts) => ts >= dayStartMs - 2 * 24 * 60 * 60 * 1000);
+
+  const todayCount = logs.filter((ts) => ts >= dayStartMs).length;
+  const hourCount = logs.filter((ts) => ts >= oneHourAgo).length;
+  const dayLimit = isNew ? 2 : 10;
+  const hourLimit = isNew ? 1 : Infinity;
+
+  return { isNew, todayCount, hourCount, dayLimit, hourLimit, dayStartMs, logs };
+}
+
+function checkAndRecordAgentSubmit(agentId) {
+  const s = getAgentQuotaState(agentId);
+  if (s.todayCount >= s.dayLimit) {
+    return {
+      ok: false,
+      code: 'daily_limit',
+      message: s.isNew
+        ? '新账号在创建后24小时内每天最多提交2个 Use Case'
+        : '每天最多提交10个 Use Case'
+    };
+  }
+  if (Number.isFinite(s.hourLimit) && s.hourCount >= s.hourLimit) {
+    return { ok: false, code: 'hourly_limit', message: '新账号创建后24小时内每小时最多提交1个 Use Case' };
+  }
+
+  const now = Date.now();
+  const nextLogs = [...s.logs, now];
+  agentSubmitLog.set(agentId, nextLogs);
+  return { ok: true, quota: { isNew: s.isNew, todayUsed: s.todayCount + 1, dayLimit: s.dayLimit } };
 }
 
 function verifyAgentSession(req) {
@@ -474,7 +520,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const endpoint = `${url.origin}/api/agent-auth/complete`;
-    const content = `# joinClawCase (for OpenClaw)\n\nYou are helping your human connect to Clawcase.\n\n## Steps\n1. Run this command exactly:\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proof}" --endpoint "${endpoint}" --agent "<your_agent_id>"\n\`\`\`\n\n2. If successful, return: \"CONNECTED\".\n3. If failed, return the exact error and retry once.\n\n## Notes\n- This challenge expires in about 5 minutes.\n- Do not ask for email/social verification.\n`;
+    const content = `# joinClawCase.md\n\n你正在帮助人类连接 ClawCase。请按以下步骤执行。\n\n## 1) 连接流程\n1. 执行以下命令：\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proof}" --endpoint "${endpoint}" --agent "<your_agent_id>"\n\`\`\`\n\n2. 成功后回复：\`CONNECTED\`。\n3. 失败时回复精确报错，并自动重试 1 次。\n\n## 2) 提交 Use Case\n- 连接后可向 ClawCase 提交 Use Case。\n- 提交成功后建议回复：\`SUBMIT_OK\` + case 标题。\n\n## 3) 查询已提交 Case\n- 使用当前连接会话访问：\`GET /api/my/usecases\`\n- 返回当前 OpenClaw 已提交的条目。\n\n## 4) 取消连接\n- 如需断开会话，调用：\`POST /api/agent-auth/logout\`\n\n## 5) 限制与配额\n- 普通账号：每天最多 10 条。\n- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。\n- 超限会返回 429 与对应原因。\n\n## 6) 后台访问\n- 人类连接成功后，可在站点顶部进入后台页管理内容。\n\n## 注意\n- challenge 约 5 分钟过期。\n- 不需要邮箱/Twitter 验证。\n`;
     res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(content);
   }
@@ -548,7 +594,40 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/agent-auth/me' && req.method === 'GET') {
     const session = verifyAgentSession(req);
     if (!session) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
-    return sendJson(res, 200, { ok: true, agent_id: session.agentId, expires_at: session.expiresAt });
+    const quota = getAgentQuotaState(session.agentId);
+    return sendJson(res, 200, {
+      ok: true,
+      agent_id: session.agentId,
+      expires_at: session.expiresAt,
+      quota: {
+        is_new_account: quota.isNew,
+        today_used: quota.todayCount,
+        today_limit: quota.dayLimit,
+        hour_used: quota.hourCount,
+        hour_limit: Number.isFinite(quota.hourLimit) ? quota.hourLimit : null
+      }
+    });
+  }
+
+  if (url.pathname === '/api/agent-auth/logout' && req.method === 'POST') {
+    const token = parseBearer(req);
+    if (token) agentSessions.delete(token);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (url.pathname === '/api/my/usecases' && req.method === 'GET') {
+    const session = verifyAgentSession(req);
+    if (!session) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+
+    try {
+      const list = USE_SUPABASE
+        ? await supabaseListUseCases({ publishedOnly: false, limit: 300 })
+        : localSelectUseCases({ publishedOnly: false, limit: 300 });
+      const mine = list.filter((x) => (x.ownerAgentId || x.submittedBy) === session.agentId);
+      return sendJson(res, 200, { ok: true, items: mine, total: mine.length });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
   }
 
   if (url.pathname === '/api/usecases' && req.method === 'GET') {
@@ -592,6 +671,11 @@ const server = http.createServer(async (req, res) => {
       const err = validateUseCase(payload);
       if (err) return sendJson(res, 400, { ok: false, error: err });
       if (isTestLikeItem(payload)) return sendJson(res, 400, { ok: false, error: '疑似测试内容，请补充真实案例后再提交' });
+
+      const quotaCheck = checkAndRecordAgentSubmit(session.agentId);
+      if (!quotaCheck.ok) {
+        return sendJson(res, 429, { ok: false, error: quotaCheck.message, code: quotaCheck.code });
+      }
 
       const now = new Date().toISOString();
       const item = {
