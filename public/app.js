@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.11-dev+20260310.1748';
+const BUILD_VERSION = 'v0.4.12-dev+20260310.1749';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -152,6 +152,11 @@ function bindConnectInline() {
   if (!heroBtn || !panel) return;
 
   heroBtn.addEventListener('click', async () => {
+    heroBtn.classList.add('connectPulse');
+    await new Promise((r) => setTimeout(r, 420));
+    heroBtn.classList.remove('connectPulse');
+    heroBtn.classList.add('connectDissolve');
+    await new Promise((r) => setTimeout(r, 280));
     heroBtn.style.display = 'none';
     panel.hidden = false;
     loading.hidden = true;

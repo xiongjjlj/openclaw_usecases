@@ -481,10 +481,11 @@ label {
 
 .connectInline {
   margin-top: 14px;
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 1px solid #f0b28f;
+  background: #fff7f2;
   border-radius: 12px;
   padding: 14px;
+  box-shadow: 0 8px 24px rgba(255, 103, 25, 0.10);
 }
 .connectLoading {
   display: none !important;
@@ -506,6 +507,22 @@ label {
 #connectStatus {
   display: none;
 }
+
+.btn.connectPulse {
+  animation: connectPulse 0.45s ease-in-out 2;
+}
+.btn.connectDissolve {
+  animation: connectDissolve 0.32s ease-out forwards;
+}
+@keyframes connectPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes connectDissolve {
+  0% { opacity: 1; filter: blur(0); transform: scale(1); }
+  100% { opacity: 0; filter: blur(4px); transform: scale(0.95); }
+}
 .connectCommand {
   margin: 6px 0 8px;
   background: #f8f8f5;
@@ -516,11 +533,11 @@ label {
 .connectActions { display:flex; gap:8px; flex-wrap:wrap; }
 .connectInline .btn {
   background: #fff;
-  color: #333;
-  border-color: #d8d8d2;
-  font-weight: 600;
+  color: #9a3f0d;
+  border-color: #f0b28f;
+  font-weight: 700;
 }
-.connectInline .btn:hover { border-color: #bdbdb8; filter: none; }
+.connectInline .btn:hover { border-color: #e69a6e; filter: none; }
 .connectDone {
   color: #0d7a32;
   font-weight: 700;
