@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.4-dev+20260310.1646';
+const BUILD_VERSION = 'v0.4.5-dev+20260310.1730';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -170,12 +170,13 @@ function bindConnectInline() {
         return;
       }
 
-      cmd.textContent = data.command || '未生成';
+      const brief = `请让你的 OpenClaw 阅读并执行：${data.guide_url || ''}`;
+      cmd.textContent = brief;
       status.textContent = '状态：等待 OpenClaw 响应';
       copyBtn.onclick = async () => {
-        await navigator.clipboard.writeText(data.command || '');
+        await navigator.clipboard.writeText(brief);
         copyBtn.textContent = '已复制';
-        setTimeout(() => (copyBtn.textContent = '复制连接命令'), 1200);
+        setTimeout(() => (copyBtn.textContent = '复制给 OpenClaw'), 1200);
       };
 
       const es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);
@@ -402,13 +403,14 @@ function renderSubmit() {
       return;
     }
 
-    connectCommand.textContent = data.command;
+    const brief = `请让你的 OpenClaw 阅读并执行：${data.guide_url || ''}`;
+    connectCommand.textContent = brief;
     connectStatus.textContent = '等待 OpenClaw 响应...';
 
     copyConnectCmd.onclick = async () => {
-      await navigator.clipboard.writeText(data.command || '');
+      await navigator.clipboard.writeText(brief);
       copyConnectCmd.textContent = '已复制';
-      setTimeout(() => { copyConnectCmd.textContent = '复制指令'; }, 1200);
+      setTimeout(() => { copyConnectCmd.textContent = '复制给 OpenClaw'; }, 1200);
     };
 
     const es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);

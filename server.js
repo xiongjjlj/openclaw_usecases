@@ -437,7 +437,18 @@ const server = http.createServer(async (req, res) => {
 
     const endpoint = `${url.origin}/api/agent-auth/complete`;
     const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proofCode}" --endpoint "${endpoint}" --agent "<your_agent_id>"`;
-    return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command });
+    const guideUrl = `${url.origin}/joinClawCase.md?challenge_id=${encodeURIComponent(challengeId)}&nonce=${encodeURIComponent(nonce)}&proof=${encodeURIComponent(proofCode)}`;
+    return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command, guide_url: guideUrl });
+  }
+
+  if (url.pathname === '/joinClawCase.md' && req.method === 'GET') {
+    const challengeId = sanitizeText(url.searchParams.get('challenge_id') || '');
+    const nonce = sanitizeText(url.searchParams.get('nonce') || '');
+    const proof = sanitizeText(url.searchParams.get('proof') || '');
+    const endpoint = `${url.origin}/api/agent-auth/complete`;
+    const content = `# joinClawCase (for OpenClaw)\n\nYou are helping your human connect to Clawcase.\n\n## Steps\n1. Run this command exactly:\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proof}" --endpoint "${endpoint}" --agent "<your_agent_id>"\n\`\`\`\n\n2. If successful, return: \"CONNECTED\".\n3. If failed, return the exact error and retry once.\n\n## Notes\n- This challenge expires in about 5 minutes.\n- Do not ask for email/social verification.\n`;
+    res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(content);
   }
 
   if (url.pathname === '/api/agent-auth/complete' && req.method === 'POST') {
