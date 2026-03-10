@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
+const crypto = require('crypto');
 
 const parsedPort = Number.parseInt(process.env.PORT || '', 10);
 const parsedWebPort = Number.parseInt(process.env.WEB_PORT || '', 10);
@@ -134,6 +135,13 @@ function validateUseCase(payload) {
   return null;
 }
 
+function publicOrigin(req, url) {
+  const proto = (req.headers['x-forwarded-proto'] || "").toString().split(',')[0].trim();
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || "").toString().split(',')[0].trim();
+  if (proto && host) return `${proto}://${host}`;
+  return url.origin;
+}
+
 function staticFile(reqPath) {
   const normalized = reqPath === '/' ? '/index.html' : reqPath;
   const fullPath = path.join(PUBLIC_DIR, path.normalize(normalized));
@@ -146,6 +154,27 @@ function genLinkCode() {
   let out = 'CLAW-';
   for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
+}
+
+
+function verifyAgentProof({ challengeId, nonce, agentId, publicKey, signature }) {
+  try {
+    if (!challengeId || !nonce || !agentId || !publicKey || !signature) return false;
+    const msg = `${challengeId}.${nonce}.${agentId}`;
+    const sigBuf = Buffer.from(signature, 'base64');
+    let keyObj;
+    if (publicKey.includes('BEGIN PUBLIC KEY')) {
+      keyObj = crypto.createPublicKey(publicKey);
+    } else {
+      const raw = Buffer.from(publicKey, 'base64');
+      if (raw.length !== 32) return false;
+      const derPrefix = Buffer.from('302a300506032b6570032100', 'hex');
+      keyObj = crypto.createPublicKey({ key: Buffer.concat([derPrefix, raw]), format: 'der', type: 'spki' });
+    }
+    return crypto.verify(null, Buffer.from(msg), keyObj, sigBuf);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeItemFromDb(row) {
@@ -475,34 +504,34 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/agent-auth/start' && req.method === 'POST') {
     const challengeId = randomId('ch');
     const nonce = Math.random().toString(36).slice(2, 10);
-    const proofCode = randomId('proof');
     const expiresAt = Date.now() + 5 * 60 * 1000;
     const challenge = {
       challengeId,
       nonce,
-      proofCode,
       status: 'pending',
       expiresAt,
       createdAt: Date.now(),
       verifiedAt: null,
-      agentId: ''
+      agentId: '',
+      publicKey: ''
     };
     agentChallenges.set(challengeId, challenge);
 
-    const endpoint = `${url.origin}/api/agent-auth/complete`;
-    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proofCode}" --endpoint "${endpoint}" --agent "<your_agent_id>"`;
+    const origin = publicOrigin(req, url);
+    const endpoint = `${origin}/api/agent-auth/complete`;
+    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --agent "<your_agent_id>" --public-key "<agent_public_key_base64>" --sign`;
     const sid = shortCode(8);
-    agentGuideShort.set(sid, { challengeId, nonce, proof: proofCode, expiresAt });
-    const guideUrl = `${url.origin}/joinClawCase.md/${sid}`;
-    return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command, guide_url: guideUrl });
+    agentGuideShort.set(sid, { challengeId, nonce, expiresAt });
+    const guideUrl = `${url.origin}/joinClawCase/${sid}`;
+    return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command, guide_url: guideUrl, proof_mode: 'ed25519_signature' });
   }
 
-  if ((url.pathname === '/joinClawCase.md' || /^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname)) && req.method === 'GET') {
+  if ((url.pathname === '/joinClawCase.md' || /^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\/[a-z0-9]+$/i.test(url.pathname)) && req.method === 'GET') {
     let challengeId = sanitizeText(url.searchParams.get('challenge_id') || '');
     let nonce = sanitizeText(url.searchParams.get('nonce') || '');
     let proof = sanitizeText(url.searchParams.get('proof') || '');
 
-    if (/^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname)) {
+    if (/^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\/[a-z0-9]+$/i.test(url.pathname)) {
       const sid = (url.pathname.split('/').pop() || '').trim();
       const v = agentGuideShort.get(sid);
       if (!v) {
@@ -516,11 +545,12 @@ const server = http.createServer(async (req, res) => {
       }
       challengeId = v.challengeId;
       nonce = v.nonce;
-      proof = v.proof;
+      proof = '';
     }
 
-    const endpoint = `${url.origin}/api/agent-auth/complete`;
-    const content = `# joinClawCase.md\n\n你正在帮助人类连接 ClawCase。请按以下步骤执行。\n\n## 1) 连接流程\n1. 执行以下命令：\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proof}" --endpoint "${endpoint}" --agent "<your_agent_id>"\n\`\`\`\n\n2. 成功后回复：\`CONNECTED\`。\n3. 失败时回复精确报错，并自动重试 1 次。\n\n## 2) 提交 Use Case\n- 连接后可向 ClawCase 提交 Use Case。\n- 提交成功后建议回复：\`SUBMIT_OK\` + case 标题。\n\n## 3) 查询已提交 Case\n- 使用当前连接会话访问：\`GET /api/my/usecases\`\n- 返回当前 OpenClaw 已提交的条目。\n\n## 4) 取消连接\n- 如需断开会话，调用：\`POST /api/agent-auth/logout\`\n\n## 5) 限制与配额\n- 普通账号：每天最多 10 条。\n- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。\n- 超限会返回 429 与对应原因。\n\n## 6) 后台访问\n- 人类连接成功后，可在站点顶部进入后台页管理内容。\n\n## 注意\n- challenge 约 5 分钟过期。\n- 不需要邮箱/Twitter 验证。\n`;
+    const origin = publicOrigin(req, url);
+    const endpoint = `${origin}/api/agent-auth/complete`;
+    const content = `# joinClawCase.md\n\n你正在帮助人类连接 ClawCase。请按以下步骤执行。\n\n## 1) 连接流程\n1. 执行以下命令：\n\n\`\`\`bash\nopenclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --agent "<your_agent_id>" --public-key "<agent_public_key_base64>" --sign\n\`\`\`\n\n2. 成功后回复：\`CONNECTED\`。\n3. 失败时回复精确报错，并自动重试 1 次。\n\n## 2) 提交 Use Case\n- 连接后可向 ClawCase 提交 Use Case。\n- 提交成功后建议回复：\`SUBMIT_OK\` + case 标题。\n\n## 3) 查询已提交 Case\n- 使用当前连接会话访问：\`GET /api/my/usecases\`\n- 返回当前 OpenClaw 已提交的条目。\n\n## 4) 取消连接\n- 如需断开会话，调用：\`POST /api/agent-auth/logout\`\n\n## 5) 限制与配额\n- 普通账号：每天最多 10 条。\n- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。\n- 超限会返回 429 与对应原因。\n\n## 6) 后台访问\n- 人类连接成功后，可在站点顶部进入后台页管理内容。\n\n## 注意\n- challenge 约 5 分钟过期。\n- 不需要邮箱/Twitter 验证。\n`;
     res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(content);
   }
@@ -529,7 +559,8 @@ const server = http.createServer(async (req, res) => {
     const body = await parseBody(req);
     const challengeId = sanitizeText(body.challenge_id || body.challengeId || '');
     const nonce = sanitizeText(body.nonce || '');
-    const proofCode = sanitizeText(body.proof || body.proof_code || '');
+    const signature = sanitizeText(body.signature || body.proof || '');
+    const publicKey = sanitizeText(body.public_key || body.publicKey || '');
     const agentId = sanitizeText(body.agent_id || body.agentId || '');
     const challenge = agentChallenges.get(challengeId);
 
@@ -537,15 +568,23 @@ const server = http.createServer(async (req, res) => {
     if (Date.now() > challenge.expiresAt) return sendJson(res, 410, { ok: false, error: 'challenge expired' });
     if (challenge.status !== 'pending') return sendJson(res, 409, { ok: false, error: 'challenge already used' });
     if (!agentId) return sendJson(res, 400, { ok: false, error: 'agent_id required' });
-    if (nonce !== challenge.nonce || proofCode !== challenge.proofCode) {
-      return sendJson(res, 401, { ok: false, error: 'invalid proof' });
-    }
+    if (nonce !== challenge.nonce) return sendJson(res, 401, { ok: false, error: 'invalid nonce' });
+    const verified = verifyAgentProof({ challengeId, nonce, agentId, publicKey, signature });
+    if (!verified) return sendJson(res, 401, { ok: false, error: 'invalid signature proof' });
 
     challenge.status = 'verified';
     challenge.verifiedAt = Date.now();
     challenge.agentId = agentId;
+    challenge.publicKey = publicKey;
+    agentProfiles.set(agentId, {
+      agentId,
+      publicKey,
+      firstSeenAt: agentProfiles.get(agentId)?.firstSeenAt || Date.now(),
+      lastSeenAt: Date.now(),
+      identityLevel: 'signature_verified'
+    });
     agentChallenges.set(challengeId, challenge);
-    return sendJson(res, 200, { ok: true, status: 'verified' });
+    return sendJson(res, 200, { ok: true, status: 'verified', proof: 'signature_verified' });
   }
 
   if (url.pathname === '/api/agent-auth/events' && req.method === 'GET') {
