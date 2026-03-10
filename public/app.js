@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.13-dev+20260310.1747';
+const BUILD_VERSION = 'v0.4.14-dev+20260310.1750';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -149,7 +149,16 @@ function bindConnectInline() {
   const status = document.getElementById('connectStatusText');
   const copyBtn = document.getElementById('copyConnectCmd');
   const goSubmit = document.getElementById('goSubmitAfterConnect');
+  const cancelBtn = document.getElementById('connectCancelBtn');
   if (!heroBtn || !panel) return;
+
+  let es = null;
+  cancelBtn?.addEventListener('click', () => {
+    if (es) es.close();
+    panel.hidden = true;
+    heroBtn.style.display = 'inline-flex';
+    heroBtn.classList.remove('connectPulse', 'connectDissolve');
+  });
 
   heroBtn.addEventListener('click', async () => {
     heroBtn.classList.add('connectPulse');
@@ -183,7 +192,7 @@ function bindConnectInline() {
         setTimeout(() => (copyBtn.textContent = '复制给 OpenClaw'), 1200);
       };
 
-      const es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);
+      es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);
       es.onmessage = (evt) => {
         const p = JSON.parse(evt.data || '{}');
         if (p.status === 'pending') {

@@ -480,55 +480,60 @@ label {
 
 
 .connectInline {
+  position: relative;
   margin-top: 14px;
   border: 1px solid #f0b28f;
-  background: #fff7f2;
+  background: linear-gradient(180deg, #fff8f3 0%, #fff6ef 100%);
   border-radius: 12px;
   padding: 14px;
-  box-shadow: 0 8px 24px rgba(255, 103, 25, 0.10);
+  box-shadow: 0 10px 28px rgba(255, 103, 25, 0.12);
+  animation: panelReveal 360ms cubic-bezier(.22,.8,.2,1);
 }
-.connectLoading {
-  display: none !important;
+@keyframes panelReveal {
+  0% { opacity: 0; transform: translateY(-8px) scale(.985); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
-.dot {
-  width: 6px; height: 6px; border-radius: 999px; background: #b8b8b0; display: inline-block;
-  animation: pulse 1s infinite ease-in-out;
+.connectCancelBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #f0b28f;
+  background: #fff;
+  color: #a34c1c;
+  cursor: pointer;
 }
-.dot:nth-child(2){animation-delay:.15s}
-.dot:nth-child(3){animation-delay:.3s}
-@keyframes pulse {0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:.9;transform:translateY(-2px)}}
+.connectCancelBtn:hover { border-color: #e59263; }
+.connectLoading { display: none !important; }
 .connectHint, .connectStatusText {
-  margin: 6px 0;
+  margin: 6px 32px 6px 0;
   font-family: Inter, -apple-system, sans-serif;
-  font-size: 13px;
-  color: #555;
+  font-size: 14px;
+  color: #6b3417;
+  font-weight: 700;
 }
 #connectStatusText,
-#connectStatus {
-  display: none;
-}
+#connectStatus { display: none; }
 
-.btn.connectPulse {
-  animation: connectPulse 0.45s ease-in-out 2;
-}
-.btn.connectDissolve {
-  animation: connectDissolve 0.32s ease-out forwards;
-}
+.btn.connectPulse { animation: connectPulse 520ms cubic-bezier(.2,.7,.2,1) 2; }
+.btn.connectDissolve { animation: connectDissolve 380ms cubic-bezier(.3,.8,.2,1) forwards; }
 @keyframes connectPulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+  45% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
 @keyframes connectDissolve {
-  0% { opacity: 1; filter: blur(0); transform: scale(1); }
-  100% { opacity: 0; filter: blur(4px); transform: scale(0.95); }
+  0% { opacity: 1; transform: scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: scale(.92); filter: blur(6px); }
 }
 .connectCommand {
-  margin: 6px 0 8px;
-  background: #f8f8f5;
-  border: 1px solid #e3e3dd;
-  border-radius: 8px;
-  color: #333;
+  margin: 8px 0 10px;
+  background: #fff;
+  border: 1px solid #efc4aa;
+  border-radius: 10px;
+  color: #4b2a18;
 }
 .connectActions { display:flex; gap:8px; flex-wrap:wrap; }
 .connectInline .btn {
@@ -538,7 +543,4 @@ label {
   font-weight: 700;
 }
 .connectInline .btn:hover { border-color: #e69a6e; filter: none; }
-.connectDone {
-  color: #0d7a32;
-  font-weight: 700;
-}
+.connectDone { color: #0d7a32; font-weight: 700; }
