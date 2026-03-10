@@ -32,26 +32,12 @@ function isConnected() {
 }
 
 function applyConnectionLabels() {
-  const navSubmitLink = document.getElementById('navSubmitLink');
-  if (navSubmitLink) {
-    if (isConnected()) {
-      navSubmitLink.textContent = '☑️ 已连接OpenClaw';
-      navSubmitLink.setAttribute('href', '#/submit');
-      navSubmitLink.classList.add('connectBtn');
-    } else {
-      navSubmitLink.textContent = '连接 OpenClaw，提交 UseCase';
-      navSubmitLink.setAttribute('href', '#/connect');
-      navSubmitLink.classList.add('connectBtn');
-    }
-  }
   const heroBtn = document.getElementById('heroConnectSubmitBtn');
   if (heroBtn) {
     if (isConnected()) {
       heroBtn.textContent = '☑️ 已连接OpenClaw';
-      heroBtn.setAttribute('href', '#/submit');
     } else {
       heroBtn.textContent = '连接 OpenClaw，提交 UseCase';
-      heroBtn.setAttribute('href', '#/connect');
     }
   }
 }
@@ -155,11 +141,66 @@ function renderActiveFilters(container, searchValue) {
   container.innerHTML = chips.map((x) => `<span class="chip">${esc(x)}</span>`).join('') || '<span class="chip muted">当前无筛选</span>';
 }
 
+function bindConnectInline() {
+  const heroBtn = document.getElementById('heroConnectSubmitBtn');
+  const panel = document.getElementById('connectInline');
+  const loading = document.getElementById('connectLoading');
+  const cmd = document.getElementById('connectCommand');
+  const status = document.getElementById('connectStatusText');
+  const copyBtn = document.getElementById('copyConnectCmd');
+  const goSubmit = document.getElementById('goSubmitAfterConnect');
+  if (!heroBtn || !panel) return;
+
+  let timer = null;
+  async function poll(code) {
+    if (timer) clearInterval(timer);
+    timer = setInterval(async () => {
+      const res = await fetch(`/api/auth/link/status?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      status.textContent = `状态：${data.status || 'pending'}`;
+      if (data.status === 'linked') {
+        localStorage.setItem('clawcase_connected', '1');
+        status.textContent = '☑️ 已完成连接';
+        status.classList.add('connectDone');
+        loading.hidden = true;
+        goSubmit.style.display = 'inline-flex';
+        applyConnectionLabels();
+        clearInterval(timer);
+      }
+    }, 2500);
+  }
+
+  heroBtn.addEventListener('click', async () => {
+    panel.hidden = false;
+    loading.hidden = false;
+    status.classList.remove('connectDone');
+    status.textContent = '状态：正在生成连接码...';
+    const res = await fetch('/api/auth/link/start', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      loading.hidden = true;
+      status.textContent = `状态：失败（${data.error || 'unknown'}）`;
+      return;
+    }
+    const command = `link clawcase ${data.code}`;
+    cmd.textContent = command;
+    status.textContent = '状态：等待 OpenClaw 认领';
+    loading.hidden = false;
+    copyBtn.onclick = async () => {
+      await navigator.clipboard.writeText(command);
+      copyBtn.textContent = '已复制';
+      setTimeout(() => (copyBtn.textContent = '复制连接命令'), 1200);
+    };
+    poll(data.code);
+  });
+}
+
 async function renderHome() {
   app.innerHTML = '';
   const node = document.getElementById('homeTpl').content.cloneNode(true);
   app.appendChild(node);
   applyConnectionLabels();
+  bindConnectInline();
 
   const grid = document.getElementById('grid');
   const searchInput = document.getElementById('searchInput');
@@ -458,22 +499,20 @@ async function renderAdmin() {
   const listBox = document.getElementById('adminList');
   const statusFilter = document.getElementById('adminStatus');
   const refreshBtn = document.getElementById('adminRefresh');
-  const loginBtn = document.getElementById('adminLoginBtn');
+  const saveTokenBtn = document.getElementById('adminSaveTokenBtn');
   const logoutBtn = document.getElementById('adminLogoutBtn');
+  const tokenInput = document.getElementById('adminTokenInput');
+  tokenInput.value = getAdminToken();
 
   async function ensureAuth() {
-    let token = getAdminToken();
-    if (!token) {
-      token = prompt('请输入 Admin 访问口令');
-      if (!token) return false;
-      setAdminToken(token);
-    }
+    const token = getAdminToken();
+    if (!token) return false;
 
     const check = await adminFetch('/api/admin/auth-check');
     if (check.ok) return true;
 
     localStorage.removeItem(ADMIN_TOKEN_KEY);
-    alert('Admin 鉴权失败，请重新输入口令');
+    tokenInput.value = '';
     return false;
   }
 
@@ -521,18 +560,26 @@ async function renderAdmin() {
     `).join('');
   }
 
-  loginBtn.addEventListener('click', async () => {
-    const token = prompt('输入 Admin 访问口令');
-    if (!token) return;
+  saveTokenBtn.addEventListener('click', async () => {
+    const token = (tokenInput.value || '').trim();
+    if (!token) {
+      alert('请先输入后台口令');
+      return;
+    }
     setAdminToken(token);
     const ok = await ensureAuth();
-    if (ok) await load();
+    if (!ok) {
+      alert('口令不正确，请重试');
+      return;
+    }
+    await load();
   });
 
   logoutBtn.addEventListener('click', () => {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
-    statBox.textContent = '已退出';
-    listBox.innerHTML = '<p class="statusEmpty">请重新登录后台</p>';
+    tokenInput.value = '';
+    statBox.textContent = '已清除口令';
+    listBox.innerHTML = '<p class="statusEmpty">请先输入后台口令</p>';
   });
 
   refreshBtn.addEventListener('click', load);
