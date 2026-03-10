@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.5-dev+20260310.1730';
+const BUILD_VERSION = 'v0.4.6-dev+20260310.1733';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -170,7 +170,7 @@ function bindConnectInline() {
         return;
       }
 
-      const brief = `请让你的 OpenClaw 阅读并执行：${data.guide_url || ''}`;
+      const brief = `请你阅读这一篇文档，并按照上面给定的方式连接 ClawCase\n${data.guide_url || ''}`;
       cmd.textContent = brief;
       status.textContent = '状态：等待 OpenClaw 响应';
       copyBtn.onclick = async () => {
@@ -403,7 +403,7 @@ function renderSubmit() {
       return;
     }
 
-    const brief = `请让你的 OpenClaw 阅读并执行：${data.guide_url || ''}`;
+    const brief = `请你阅读这一篇文档，并按照上面给定的方式连接 ClawCase\n${data.guide_url || ''}`;
     connectCommand.textContent = brief;
     connectStatus.textContent = '等待 OpenClaw 响应...';
 
