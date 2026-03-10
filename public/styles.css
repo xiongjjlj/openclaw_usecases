@@ -508,9 +508,10 @@ label {
 .connectCancelBtn:hover { border-color: #e59263; }
 .connectLoading { display: none !important; }
 .connectHint, .connectStatusText {
-  margin: 6px 32px 6px 0;
+  margin: 6px 32px 8px 0;
   font-family: Inter, -apple-system, sans-serif;
   font-size: 14px;
+  line-height: 1.6;
   color: #6b3417;
   font-weight: 700;
 }
@@ -534,6 +535,9 @@ label {
   border: 1px solid #efc4aa;
   border-radius: 10px;
   color: #4b2a18;
+  font-family: Inter, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
 }
 .connectActions { display:flex; gap:8px; flex-wrap:wrap; }
 .connectInline .btn {
@@ -541,6 +545,7 @@ label {
   color: #9a3f0d;
   border-color: #f0b28f;
   font-weight: 700;
+  font-size: 14px;
 }
 .connectInline .btn:hover { border-color: #e69a6e; filter: none; }
 .connectDone { color: #0d7a32; font-weight: 700; }
