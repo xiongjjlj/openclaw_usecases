@@ -177,6 +177,15 @@ function sanitizeText(value = '') {
     .trim();
 }
 
+function isTestLikeItem(item = {}) {
+  const text = [item.title, item.summary, item.problem, item.workflow, item.reproPrompt]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const hitWords = ['测试', 'test', 'supabase写入', 'debug', '调试', 'hello world'];
+  return hitWords.some((w) => text.includes(w));
+}
+
 function validateUseCase(payload) {
   const required = ['title', 'summary', 'problem', 'workflow', 'reproPrompt'];
   for (const key of required) {
@@ -246,6 +255,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 500, { ok: false, error: e.message });
     }
 
+    list = list.filter((it) => !isTestLikeItem(it));
+
     if (q) {
       list = list.filter((it) =>
         [it.title, it.summary, it.problem, it.workflow, it.reproPrompt]
@@ -282,6 +293,7 @@ const server = http.createServer(async (req, res) => {
 
       const err = validateUseCase(payload);
       if (err) return sendJson(res, 400, { ok: false, error: err });
+      if (isTestLikeItem(payload)) return sendJson(res, 400, { ok: false, error: '疑似测试内容，请补充真实案例后再提交' });
 
       const now = new Date().toISOString();
       const item = {
