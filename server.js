@@ -15,13 +15,12 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const USE_SUPABASE = Boolean(SUPABASE_SERVICE_ROLE_KEY);
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify({ usecases: [] }, null, 2));
-}
-
 const CATEGORY_ENUM = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建', '其他'];
+const STATUS_ENUM = ['draft', 'pending_review', 'approved', 'rejected', 'changes_requested', 'published'];
 const submitRate = new Map();
+const linkSessions = new Map();
+const agentChallenges = new Map();
+const agentSessions = new Map();
 
 const REQUIRED_USE_CASES = [
   { id: 'uc_beeclaw_trading', title: 'BeeClaw：以 OpenClaw 为执行内核的交易 Bot', category: '交易与预测市场' },
@@ -34,118 +33,28 @@ const REQUIRED_USE_CASES = [
   { id: 'uc_visionclaw', title: 'VisionClaw：把 Agent 带进眼镜', category: '移动与可穿戴' }
 ];
 
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png'
+};
+
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(DB_PATH)) {
+  fs.writeFileSync(DB_PATH, JSON.stringify({ usecases: [], reviewEvents: [] }, null, 2));
+}
+
 function sendJson(res, code, payload) {
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   });
   res.end(JSON.stringify(payload));
-}
-
-function readDb() {
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-}
-
-function writeDb(db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
-
-function ensureRequiredUseCases() {
-  const db = readDb();
-  const now = new Date().toISOString();
-  let changed = false;
-  for (const uc of REQUIRED_USE_CASES) {
-    if (!db.usecases.find((x) => x.id === uc.id || x.title === uc.title)) {
-      db.usecases.push({
-        id: uc.id,
-        title: uc.title,
-        summary: `${uc.title} 的代表性案例，支持直接复现。`,
-        problem: '将复杂能力产品化并复用。',
-        workflow: '1) 场景定义 2) 任务编排 3) 执行验证 4) 复盘优化',
-        reproPrompt: `你是 OpenClaw。请复现案例：${uc.title}，并输出执行步骤、结果与复盘。`,
-        category: uc.category,
-        tools: [],
-        tags: [],
-        links: [],
-        submittedBy: 'bear',
-        createdAt: now,
-        updatedAt: now
-      });
-      changed = true;
-    }
-  }
-  if (changed) writeDb(db);
-}
-
-if (!USE_SUPABASE) ensureRequiredUseCases();
-
-function normalizeItemFromDb(row) {
-  return {
-    id: row.id,
-    title: row.title,
-    summary: row.summary,
-    problem: row.problem,
-    workflow: row.workflow,
-    reproMode: row.repro_mode,
-    reproPrompt: row.repro_prompt || '',
-    manualSteps: row.manual_steps || '',
-    category: row.category,
-    tags: row.tags || [],
-    tools: row.tools || [],
-    links: row.links || [],
-    sourceDate: row.source_date || '',
-    evidenceNote: row.evidence_note || '',
-    submittedBy: row.submitted_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
-
-async function supabaseSelectUseCases() {
-  const headers = {
-    apikey: SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY}`
-  };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases?status=eq.published&order=created_at.desc`, { headers });
-  if (!res.ok) throw new Error(`supabase select failed: ${res.status}`);
-  const rows = await res.json();
-  return rows.map(normalizeItemFromDb);
-}
-
-async function supabaseInsertUseCase(item) {
-  const payload = {
-    id: item.id,
-    title: item.title,
-    summary: item.summary,
-    problem: item.problem,
-    workflow: item.workflow,
-    repro_mode: item.reproMode || 'semi-auto',
-    repro_prompt: item.reproPrompt || '',
-    manual_steps: item.manualSteps || '',
-    category: item.category || 'General',
-    tags: item.tags || [],
-    tools: item.tools || [],
-    links: item.links || [],
-    source_date: item.sourceDate || null,
-    evidence_note: item.evidenceNote || '',
-    submitted_by: item.submittedBy || 'anonymous-openclaw',
-    status: 'published'
-  };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw new Error(`supabase insert failed: ${res.status}`);
-  const rows = await res.json();
-  return normalizeItemFromDb(rows[0]);
 }
 
 function parseBody(req) {
@@ -161,7 +70,7 @@ function parseBody(req) {
     req.on('end', () => {
       try {
         resolve(raw ? JSON.parse(raw) : {});
-      } catch (e) {
+      } catch {
         reject(new Error('Invalid JSON'));
       }
     });
@@ -175,6 +84,17 @@ function sanitizeText(value = '') {
     .replace(/javascript:/gi, '')
     .replace(/<\/?script[^>]*>/gi, '')
     .trim();
+}
+
+function readDb() {
+  const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  if (!Array.isArray(db.usecases)) db.usecases = [];
+  if (!Array.isArray(db.reviewEvents)) db.reviewEvents = [];
+  return db;
+}
+
+function writeDb(db) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
 function isTestLikeItem(item = {}) {
@@ -216,23 +136,255 @@ function staticFile(reqPath) {
   return fullPath;
 }
 
-const linkSessions = new Map();
-
 function genLinkCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "CLAW-";
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = 'CLAW-';
   for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png'
-};
+function normalizeItemFromDb(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    problem: row.problem,
+    workflow: row.workflow,
+    reproMode: row.repro_mode || row.reproMode,
+    reproPrompt: row.repro_prompt || row.reproPrompt || '',
+    manualSteps: row.manual_steps || row.manualSteps || '',
+    category: row.category,
+    tags: row.tags || [],
+    tools: row.tools || [],
+    links: row.links || [],
+    sourceDate: row.source_date || row.sourceDate || '',
+    evidenceNote: row.evidence_note || row.evidenceNote || '',
+    submittedBy: row.submitted_by || row.submittedBy,
+    ownerAgentId: row.owner_agent_id || row.ownerAgentId || '',
+    authMethod: row.auth_method || row.authMethod || '',
+    identityLevel: row.identity_level || row.identityLevel || '',
+    status: row.status || 'pending_review',
+    reviewReason: row.review_reason || row.reviewReason || '',
+    reviewedBy: row.reviewed_by || row.reviewedBy || '',
+    reviewedAt: row.reviewed_at || row.reviewedAt || '',
+    createdAt: row.created_at || row.createdAt,
+    updatedAt: row.updated_at || row.updatedAt
+  };
+}
+
+function ensureRequiredUseCases() {
+  const db = readDb();
+  const now = new Date().toISOString();
+  let changed = false;
+  for (const uc of REQUIRED_USE_CASES) {
+    if (!db.usecases.find((x) => x.id === uc.id || x.title === uc.title)) {
+      db.usecases.push({
+        id: uc.id,
+        title: uc.title,
+        summary: `${uc.title} 的代表性案例，支持直接复现。`,
+        problem: '将复杂能力产品化并复用。',
+        workflow: '1) 场景定义 2) 任务编排 3) 执行验证 4) 复盘优化',
+        reproPrompt: `你是 OpenClaw。请复现案例：${uc.title}，并输出执行步骤、结果与复盘。`,
+        category: uc.category,
+        tools: [],
+        tags: [],
+        links: [],
+        submittedBy: 'bear',
+        status: 'published',
+        createdAt: now,
+        updatedAt: now
+      });
+      changed = true;
+    }
+  }
+  if (changed) writeDb(db);
+}
+
+if (!USE_SUPABASE) ensureRequiredUseCases();
+
+function pickAuthHeaders(useServiceRole = false) {
+  const token = useServiceRole ? SUPABASE_SERVICE_ROLE_KEY : (SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY);
+  return {
+    apikey: token,
+    Authorization: `Bearer ${token}`
+  };
+}
+
+async function supabaseListUseCases({ status, q, category, limit = 100, offset = 0, publishedOnly = false } = {}) {
+  const params = new URLSearchParams();
+  params.set('select', '*');
+  params.set('order', 'created_at.desc');
+  params.set('limit', String(limit));
+  params.set('offset', String(offset));
+  if (publishedOnly) params.append('status', 'eq.published');
+  if (status) params.append('status', `eq.${status}`);
+  if (category) params.append('category', `eq.${category}`);
+  if (q) params.append('or', `(title.ilike.*${q}*,summary.ilike.*${q}*,problem.ilike.*${q}*)`);
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases?${params.toString()}`, {
+    headers: pickAuthHeaders(!publishedOnly)
+  });
+  if (!res.ok) throw new Error(`supabase select failed: ${res.status}`);
+  const rows = await res.json();
+  return rows.map(normalizeItemFromDb);
+}
+
+async function supabaseInsertUseCase(item) {
+  const payload = {
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+    problem: item.problem,
+    workflow: item.workflow,
+    repro_mode: item.reproMode || 'semi-auto',
+    repro_prompt: item.reproPrompt || '',
+    manual_steps: item.manualSteps || '',
+    category: item.category || 'General',
+    tags: item.tags || [],
+    tools: item.tools || [],
+    links: item.links || [],
+    source_date: item.sourceDate || null,
+    evidence_note: item.evidenceNote || '',
+    submitted_by: item.submittedBy || 'anonymous-openclaw',
+    status: item.status || 'pending_review'
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases`, {
+    method: 'POST',
+    headers: {
+      ...pickAuthHeaders(true),
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`supabase insert failed: ${res.status}`);
+  const rows = await res.json();
+  return normalizeItemFromDb(rows[0]);
+}
+
+async function supabaseUpdateReviewDecision(id, decision, reason = '', operator = 'system') {
+  const now = new Date().toISOString();
+  const targetStatus = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'changes_requested';
+  const payload = {
+    status: targetStatus,
+    review_reason: reason,
+    reviewed_by: operator,
+    reviewed_at: now,
+    updated_at: now
+  };
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      ...pickAuthHeaders(true),
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`supabase update failed: ${res.status}`);
+  const rows = await res.json();
+  return normalizeItemFromDb(rows[0]);
+}
+
+function localSelectUseCases({ status, q, category, publishedOnly = false, limit = 100, offset = 0 } = {}) {
+  let list = [...readDb().usecases]
+    .map(normalizeItemFromDb)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (publishedOnly) list = list.filter((x) => x.status === 'published');
+  if (status) list = list.filter((x) => x.status === status);
+  if (category) list = list.filter((x) => x.category === category);
+  if (q) {
+    const qq = q.toLowerCase();
+    list = list.filter((it) => [it.title, it.summary, it.problem, it.workflow].join(' ').toLowerCase().includes(qq));
+  }
+  return list.slice(offset, offset + limit);
+}
+
+function localApplyDecision(id, decision, reason = '', operator = 'system') {
+  const targetStatus = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'changes_requested';
+  const db = readDb();
+  const idx = db.usecases.findIndex((x) => x.id === id);
+  if (idx < 0) return null;
+
+  const before = normalizeItemFromDb(db.usecases[idx]);
+  const now = new Date().toISOString();
+  db.usecases[idx].status = targetStatus;
+  db.usecases[idx].reviewReason = reason;
+  db.usecases[idx].reviewedBy = operator;
+  db.usecases[idx].reviewedAt = now;
+  db.usecases[idx].updatedAt = now;
+
+  db.reviewEvents.unshift({
+    id: `rev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    itemId: id,
+    action: decision,
+    fromStatus: before.status,
+    toStatus: targetStatus,
+    reason,
+    operator,
+    createdAt: now
+  });
+
+  writeDb(db);
+  return normalizeItemFromDb(db.usecases[idx]);
+}
+
+function localStats() {
+  const list = readDb().usecases.map(normalizeItemFromDb);
+  const counters = STATUS_ENUM.reduce((acc, s) => {
+    acc[s] = 0;
+    return acc;
+  }, {});
+  for (const it of list) counters[it.status] = (counters[it.status] || 0) + 1;
+  return {
+    total: list.length,
+    pendingReview: counters.pending_review || 0,
+    approved: counters.approved || 0,
+    rejected: counters.rejected || 0,
+    published: counters.published || 0,
+    byStatus: counters
+  };
+}
+
+function validateDecisionPayload(body = {}) {
+  const decision = (body.decision || '').trim();
+  if (!['approve', 'reject', 'request_changes'].includes(decision)) {
+    return { error: 'decision must be approve/reject/request_changes' };
+  }
+  const reason = sanitizeText(body.reason || body.note || '');
+  return { decision, reason, operator: sanitizeText(body.operator || 'admin') || 'admin' };
+}
+
+function randomId(prefix = 'id') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function parseBearer(req) {
+  const v = String(req.headers.authorization || '');
+  if (!v.toLowerCase().startsWith('bearer ')) return '';
+  return v.slice(7).trim();
+}
+
+function issueAgentSession(agentId) {
+  const token = randomId('agtok');
+  const expiresAt = Date.now() + 30 * 60 * 1000;
+  agentSessions.set(token, { agentId, expiresAt, createdAt: Date.now() });
+  return { token, expiresAt };
+}
+
+function verifyAgentSession(req) {
+  const token = parseBearer(req);
+  if (!token) return null;
+  const sess = agentSessions.get(token);
+  if (!sess) return null;
+  if (Date.now() > sess.expiresAt) {
+    agentSessions.delete(token);
+    return null;
+  }
+  return { token, ...sess };
+}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -240,8 +392,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     });
     return res.end();
   }
@@ -250,74 +402,126 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, service: 'openclaw-usecase-hub' });
   }
 
+  if (url.pathname === '/api/agent-auth/start' && req.method === 'POST') {
+    const challengeId = randomId('ch');
+    const nonce = Math.random().toString(36).slice(2, 10);
+    const proofCode = randomId('proof');
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    const challenge = {
+      challengeId,
+      nonce,
+      proofCode,
+      status: 'pending',
+      expiresAt,
+      createdAt: Date.now(),
+      verifiedAt: null,
+      agentId: ''
+    };
+    agentChallenges.set(challengeId, challenge);
 
-  if (url.pathname === '/api/auth/link/start' && req.method === 'POST') {
-    const code = genLinkCode();
-    linkSessions.set(code, { status: 'pending', createdAt: Date.now() });
-    return sendJson(res, 200, { ok: true, code, expiresInSec: 600 });
+    const endpoint = `${url.origin}/api/agent-auth/complete`;
+    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proofCode}" --endpoint "${endpoint}" --agent "<your_agent_id>"`;
+    return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command });
   }
 
-  if (url.pathname === '/api/auth/link/status' && req.method === 'GET') {
-    const code = (url.searchParams.get('code') || '').trim();
-    const sess = linkSessions.get(code);
-    if (!sess) return sendJson(res, 404, { ok: false, status: 'not_found' });
-    if (Date.now() - sess.createdAt > 10 * 60 * 1000) {
-      linkSessions.delete(code);
-      return sendJson(res, 410, { ok: false, status: 'expired' });
-    }
-    return sendJson(res, 200, { ok: true, status: sess.status });
-  }
-
-  // Temporary completion endpoint for integration testing.
-  if (url.pathname === '/api/auth/link/complete' && req.method === 'POST') {
+  if (url.pathname === '/api/agent-auth/complete' && req.method === 'POST') {
     const body = await parseBody(req);
-    const code = (body.code || '').trim();
-    const sess = linkSessions.get(code);
-    if (!sess) return sendJson(res, 404, { ok: false, error: 'code not found' });
-    sess.status = 'linked';
-    sess.linkedAt = Date.now();
-    linkSessions.set(code, sess);
-    return sendJson(res, 200, { ok: true, status: 'linked' });
+    const challengeId = sanitizeText(body.challenge_id || body.challengeId || '');
+    const nonce = sanitizeText(body.nonce || '');
+    const proofCode = sanitizeText(body.proof || body.proof_code || '');
+    const agentId = sanitizeText(body.agent_id || body.agentId || '');
+    const challenge = agentChallenges.get(challengeId);
+
+    if (!challenge) return sendJson(res, 404, { ok: false, error: 'challenge not found' });
+    if (Date.now() > challenge.expiresAt) return sendJson(res, 410, { ok: false, error: 'challenge expired' });
+    if (challenge.status !== 'pending') return sendJson(res, 409, { ok: false, error: 'challenge already used' });
+    if (!agentId) return sendJson(res, 400, { ok: false, error: 'agent_id required' });
+    if (nonce !== challenge.nonce || proofCode !== challenge.proofCode) {
+      return sendJson(res, 401, { ok: false, error: 'invalid proof' });
+    }
+
+    challenge.status = 'verified';
+    challenge.verifiedAt = Date.now();
+    challenge.agentId = agentId;
+    agentChallenges.set(challengeId, challenge);
+    return sendJson(res, 200, { ok: true, status: 'verified' });
+  }
+
+  if (url.pathname === '/api/agent-auth/events' && req.method === 'GET') {
+    const challengeId = (url.searchParams.get('challenge_id') || '').trim();
+    const challenge = agentChallenges.get(challengeId);
+    if (!challenge) return sendJson(res, 404, { ok: false, error: 'challenge not found' });
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    const timer = setInterval(() => {
+      const current = agentChallenges.get(challengeId);
+      if (!current) {
+        res.write(`data: ${JSON.stringify({ status: 'not_found' })}\n\n`);
+        clearInterval(timer);
+        return res.end();
+      }
+      if (Date.now() > current.expiresAt) {
+        if (current.status === 'pending') {
+          current.status = 'expired';
+          agentChallenges.set(challengeId, current);
+        }
+        res.write(`data: ${JSON.stringify({ status: 'expired' })}\n\n`);
+        clearInterval(timer);
+        return res.end();
+      }
+      if (current.status === 'verified') {
+        const session = issueAgentSession(current.agentId);
+        res.write(`data: ${JSON.stringify({ status: 'verified', session_token: session.token, session_expires_at: session.expiresAt, agent_id: current.agentId })}\n\n`);
+        current.status = 'consumed';
+        agentChallenges.set(challengeId, current);
+        clearInterval(timer);
+        return res.end();
+      }
+      res.write(`data: ${JSON.stringify({ status: 'pending' })}\n\n`);
+    }, 1200);
+
+    req.on('close', () => clearInterval(timer));
+    return;
+  }
+
+  if (url.pathname === '/api/agent-auth/me' && req.method === 'GET') {
+    const session = verifyAgentSession(req);
+    if (!session) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+    return sendJson(res, 200, { ok: true, agent_id: session.agentId, expires_at: session.expiresAt });
   }
 
   if (url.pathname === '/api/usecases' && req.method === 'GET') {
-    const q = (url.searchParams.get('q') || '').toLowerCase();
+    const q = (url.searchParams.get('q') || '').trim();
     const tag = (url.searchParams.get('tag') || '').toLowerCase();
-    const category = (url.searchParams.get('category') || '').toLowerCase();
-    let list;
+    const category = (url.searchParams.get('category') || '').trim();
 
+    let list;
     try {
       list = USE_SUPABASE
-        ? await supabaseSelectUseCases()
-        : [...readDb().usecases].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        ? await supabaseListUseCases({ q, category, publishedOnly: true, limit: 300 })
+        : localSelectUseCases({ q, category, publishedOnly: true, limit: 300 });
     } catch (e) {
       return sendJson(res, 500, { ok: false, error: e.message });
     }
 
     list = list.filter((it) => !isTestLikeItem(it));
-
-    if (q) {
-      list = list.filter((it) =>
-        [it.title, it.summary, it.problem, it.workflow, it.reproPrompt]
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
-      );
-    }
-    if (tag) {
-      list = list.filter((it) => (it.tags || []).some((t) => t.toLowerCase() === tag));
-    }
-    if (category) {
-      list = list.filter((it) => (it.category || '').toLowerCase() === category);
-    }
+    if (tag) list = list.filter((it) => (it.tags || []).some((t) => String(t).toLowerCase() === tag));
 
     return sendJson(res, 200, { items: list, total: list.length });
   }
 
   if (url.pathname === '/api/usecases' && req.method === 'POST') {
     try {
-      const payload = await parseBody(req);
+      const session = verifyAgentSession(req);
+      if (!session) return sendJson(res, 401, { ok: false, error: '请先连接 OpenClaw 再提交' });
 
+      const payload = await parseBody(req);
       if (payload.website && String(payload.website).trim()) {
         return sendJson(res, 400, { ok: false, error: 'spam detected' });
       }
@@ -345,21 +549,16 @@ const server = http.createServer(async (req, res) => {
         reproPrompt: sanitizeText(payload.reproPrompt),
         manualSteps: sanitizeText(payload.manualSteps || ''),
         category: sanitizeText(payload.category || '其他') || '其他',
-        tools: (payload.tools || '')
-          .split(',')
-          .map((v) => sanitizeText(v))
-          .filter(Boolean),
-        tags: (payload.tags || '')
-          .split(',')
-          .map((v) => sanitizeText(v))
-          .filter(Boolean),
-        links: (payload.links || '')
-          .split('\n')
-          .map((v) => sanitizeText(v))
-          .filter(Boolean),
+        tools: (payload.tools || '').split(',').map((v) => sanitizeText(v)).filter(Boolean),
+        tags: (payload.tags || '').split(',').map((v) => sanitizeText(v)).filter(Boolean),
+        links: (payload.links || '').split('\n').map((v) => sanitizeText(v)).filter(Boolean),
         sourceDate: sanitizeText(payload.sourceDate || ''),
         evidenceNote: sanitizeText(payload.evidenceNote || ''),
-        submittedBy: sanitizeText(payload.submittedBy || 'anonymous-openclaw') || 'anonymous-openclaw',
+        submittedBy: sanitizeText(payload.submittedBy || session.agentId) || session.agentId,
+        ownerAgentId: session.agentId,
+        authMethod: 'openclaw_agent',
+        identityLevel: 'agent_verified',
+        status: 'pending_review',
         createdAt: now,
         updatedAt: now
       };
@@ -371,10 +570,107 @@ const server = http.createServer(async (req, res) => {
 
       const db = readDb();
       db.usecases.push(item);
+      db.reviewEvents.unshift({
+        id: `rev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        itemId: item.id,
+        action: 'submit',
+        fromStatus: 'draft',
+        toStatus: 'pending_review',
+        reason: '',
+        operator: item.submittedBy,
+        createdAt: now
+      });
       writeDb(db);
       return sendJson(res, 201, { ok: true, item, backend: 'json' });
     } catch (e) {
       return sendJson(res, 400, { ok: false, error: e.message });
+    }
+  }
+
+  if (url.pathname === '/api/admin/reviews' && req.method === 'GET') {
+    const status = (url.searchParams.get('status') || '').trim();
+    const q = (url.searchParams.get('q') || '').trim();
+    const category = (url.searchParams.get('category') || '').trim();
+    const limit = Math.min(Number(url.searchParams.get('limit') || 100), 300);
+    const offset = Math.max(Number(url.searchParams.get('offset') || 0), 0);
+
+    if (status && !STATUS_ENUM.includes(status)) {
+      return sendJson(res, 400, { ok: false, error: 'invalid status' });
+    }
+
+    try {
+      const items = USE_SUPABASE
+        ? await supabaseListUseCases({ status, q, category, limit, offset, publishedOnly: false })
+        : localSelectUseCases({ status, q, category, limit, offset, publishedOnly: false });
+      return sendJson(res, 200, { ok: true, items, total: items.length });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
+  }
+
+  if (url.pathname.startsWith('/api/admin/reviews/') && req.method === 'GET') {
+    const id = decodeURIComponent(url.pathname.split('/').pop() || '');
+    try {
+      const items = USE_SUPABASE
+        ? await supabaseListUseCases({ publishedOnly: false, limit: 500 })
+        : localSelectUseCases({ publishedOnly: false, limit: 500 });
+      const item = items.find((x) => x.id === id);
+      if (!item) return sendJson(res, 404, { ok: false, error: 'not found' });
+
+      const db = readDb();
+      const events = (db.reviewEvents || []).filter((e) => e.itemId === id).slice(0, 50);
+      return sendJson(res, 200, { ok: true, item, events });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
+  }
+
+  if (/^\/api\/admin\/reviews\/[^/]+\/decision$/.test(url.pathname) && req.method === 'POST') {
+    const id = decodeURIComponent(url.pathname.split('/')[4] || '');
+    try {
+      const body = await parseBody(req);
+      const v = validateDecisionPayload(body);
+      if (v.error) return sendJson(res, 400, { ok: false, error: v.error });
+
+      let item;
+      if (USE_SUPABASE) {
+        item = await supabaseUpdateReviewDecision(id, v.decision, v.reason, v.operator);
+      } else {
+        item = localApplyDecision(id, v.decision, v.reason, v.operator);
+      }
+      if (!item) return sendJson(res, 404, { ok: false, error: 'not found' });
+      return sendJson(res, 200, { ok: true, item });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
+  }
+
+  if (url.pathname === '/api/admin/logs' && req.method === 'GET') {
+    const limit = Math.min(Number(url.searchParams.get('limit') || 100), 300);
+    const db = readDb();
+    return sendJson(res, 200, { ok: true, items: (db.reviewEvents || []).slice(0, limit) });
+  }
+
+  if (url.pathname === '/api/admin/stats' && req.method === 'GET') {
+    try {
+      if (USE_SUPABASE) {
+        const items = await supabaseListUseCases({ publishedOnly: false, limit: 500 });
+        const byStatus = {};
+        for (const s of STATUS_ENUM) byStatus[s] = 0;
+        for (const it of items) byStatus[it.status] = (byStatus[it.status] || 0) + 1;
+        return sendJson(res, 200, {
+          ok: true,
+          total: items.length,
+          pendingReview: byStatus.pending_review || 0,
+          approved: byStatus.approved || 0,
+          rejected: byStatus.rejected || 0,
+          published: byStatus.published || 0,
+          byStatus
+        });
+      }
+      return sendJson(res, 200, { ok: true, ...localStats() });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
     }
   }
 

@@ -423,6 +423,19 @@ label {
   font-size: 14px;
   color: #444;
 }
+.connectBox {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fcfcfa;
+}
+.connectFlow.hidden { display: none; }
+.connectHint { font-size: 12px; color: #666; font-family: Inter, -apple-system, sans-serif; }
+.connectActions { display: flex; gap: 8px; }
+.connectStatus { font-size: 13px; font-family: Inter, -apple-system, sans-serif; color: #444; }
+.connecting { opacity: 0.7; }
+
 .publicNotice {
   font-family: Inter, -apple-system, sans-serif;
   font-size: 13px;

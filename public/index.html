@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clawcase</title>
-    <link rel="stylesheet" href="/styles.css?v=202603101546" />
+    <link rel="stylesheet" href="/styles.css?v=202603101635" />
   </head>
   <body>
     <div class="bg"></div>
@@ -13,6 +13,7 @@
       <nav>
         <a href="#/">发现</a>
         <a href="#/submit">提交用例</a>
+        <a href="#/admin">后台</a>
         <a class="connectBtn" href="#/connect">连接 OpenClaw</a>
       </nav>
     </header>
@@ -91,6 +92,17 @@
         <a href="#/" class="back">← 返回首页</a>
         <article class="submitCard">
           <h2>提交 Use Case（社区投稿）</h2>
+          <div id="connectBox" class="connectBox">
+            <button id="connectBtn" class="btn" type="button">连接 OpenClaw</button>
+            <div id="connectFlow" class="connectFlow hidden">
+              <p class="connectHint">1) 复制下面指令并发送给你的 OpenClaw；2) 等待自动连接成功。</p>
+              <pre id="connectCommand" class="connectCommand"></pre>
+              <div class="connectActions">
+                <button id="copyConnectCmd" class="btn" type="button">复制指令</button>
+              </div>
+              <p id="connectStatus" class="connectStatus">等待 OpenClaw 响应...</p>
+            </div>
+          </div>
           <p class="publicNotice">公开说明：你提交的内容将公开展示。请勿填写账号密码、密钥、内部链接等敏感信息。</p>
           <form id="submitForm">
             <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" />
@@ -121,6 +133,41 @@
       </section>
     </template>
 
-    <script src="/app.js?v=202603101546"></script>
+    <template id="connectTpl">
+      <section class="submitWrap">
+        <a href="#/" class="back">← 返回首页</a>
+        <article class="submitCard">
+          <h2>连接 OpenClaw</h2>
+          <p>点击开始后，会生成一次性认领码。</p>
+          <button class="btn" id="startLinkBtn" type="button">开始连接</button>
+          <p>认领码：<code id="linkCodeBox">-</code></p>
+          <p id="linkStatus">状态：未开始</p>
+        </article>
+      </section>
+    </template>
+
+    <template id="adminTpl">
+      <section class="submitWrap">
+        <a href="#/" class="back">← 返回首页</a>
+        <article class="submitCard">
+          <h2>后台审核工作台</h2>
+          <p id="adminStats">加载中...</p>
+          <div class="filterBar" style="margin:12px 0 16px 0;">
+            <select id="adminStatus">
+              <option value="">全部状态</option>
+              <option value="pending_review">pending_review</option>
+              <option value="approved">approved</option>
+              <option value="rejected">rejected</option>
+              <option value="changes_requested">changes_requested</option>
+              <option value="published">published</option>
+            </select>
+            <button class="btn" id="adminRefresh" type="button">刷新</button>
+          </div>
+          <section id="adminList" class="listContainer"></section>
+        </article>
+      </section>
+    </template>
+
+    <script src="/app.js?v=202603101635"></script>
   </body>
 </html>

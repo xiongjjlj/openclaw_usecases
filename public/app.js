@@ -3,6 +3,8 @@ let cache = [];
 let currentCategory = '';
 let currentSort = 'popular';
 let currentView = 'grid';
+let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
+let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
 function fmtDate(s) {
   return new Date(s).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
@@ -21,10 +23,11 @@ async function getUseCases(q = '', tag = '', category = '') {
 
 function route() {
   const hash = location.hash || '#/';
-  const [, , id] = hash.match(/^#\/(|usecase\/([^/]+)|submit)$/) || [];
+  const [, , id] = hash.match(/^#\/(|usecase\/([^/]+)|submit|admin)$/) || [];
   if (hash.startsWith('#/usecase/')) return renderDetail(id);
   if (hash === '#/submit') return renderSubmit();
   if (hash === '#/connect') return renderConnect();
+  if (hash === '#/admin') return renderAdmin();
   return renderHome();
 }
 
@@ -253,15 +256,91 @@ function renderSubmit() {
 
   const form = document.getElementById('submitForm');
   const msg = document.getElementById('submitMsg');
+  const connectBtn = document.getElementById('connectBtn');
+  const connectFlow = document.getElementById('connectFlow');
+  const connectCommand = document.getElementById('connectCommand');
+  const copyConnectCmd = document.getElementById('copyConnectCmd');
+  const connectStatus = document.getElementById('connectStatus');
+
+  function setConnectedUi() {
+    if (agentSessionToken && agentId) {
+      connectBtn.textContent = `已连接 ${agentId}`;
+      connectBtn.disabled = true;
+      connectStatus.textContent = '连接成功，可提交。';
+      connectFlow.classList.remove('hidden');
+      form.dataset.connected = '1';
+    } else {
+      form.dataset.connected = '0';
+    }
+  }
+
+  setConnectedUi();
+
+  connectBtn.addEventListener('click', async () => {
+    connectBtn.classList.add('connecting');
+    connectFlow.classList.remove('hidden');
+    connectStatus.textContent = '正在生成连接指令...';
+    const res = await fetch('/api/agent-auth/start', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      connectStatus.textContent = `连接失败：${data.error || 'unknown'}`;
+      return;
+    }
+
+    connectCommand.textContent = data.command;
+    connectStatus.textContent = '等待 OpenClaw 响应...';
+
+    copyConnectCmd.onclick = async () => {
+      await navigator.clipboard.writeText(data.command || '');
+      copyConnectCmd.textContent = '已复制';
+      setTimeout(() => { copyConnectCmd.textContent = '复制指令'; }, 1200);
+    };
+
+    const es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);
+    es.onmessage = (evt) => {
+      const p = JSON.parse(evt.data || '{}');
+      if (p.status === 'pending') {
+        connectStatus.textContent = '等待 OpenClaw 响应...';
+        return;
+      }
+      if (p.status === 'expired') {
+        connectStatus.textContent = '连接已过期，请重新发起。';
+        es.close();
+        return;
+      }
+      if (p.status === 'verified') {
+        agentSessionToken = p.session_token || '';
+        agentId = p.agent_id || '';
+        localStorage.setItem('clawcase_agent_token', agentSessionToken);
+        localStorage.setItem('clawcase_agent_id', agentId);
+        connectBtn.classList.remove('connecting');
+        setConnectedUi();
+        es.close();
+      }
+    };
+    es.onerror = () => {
+      connectStatus.textContent = '连接中断，请重试。';
+      es.close();
+    };
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!agentSessionToken) {
+      msg.textContent = '请先连接 OpenClaw';
+      msg.className = 'err';
+      return;
+    }
+
     msg.textContent = '提交中...';
     const payload = Object.fromEntries(new FormData(form).entries());
 
     const res = await fetch('/api/usecases', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${agentSessionToken}`
+      },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -313,4 +392,57 @@ function renderConnect() {
     statusEl.textContent = '状态：等待 OpenClaw 认领';
     poll(data.code);
   });
+}
+
+async function renderAdmin() {
+  app.innerHTML = '';
+  const node = document.getElementById('adminTpl').content.cloneNode(true);
+  app.appendChild(node);
+
+  const statBox = document.getElementById('adminStats');
+  const listBox = document.getElementById('adminList');
+  const statusFilter = document.getElementById('adminStatus');
+  const refreshBtn = document.getElementById('adminRefresh');
+
+  async function load() {
+    statBox.textContent = '加载中...';
+    listBox.innerHTML = '<p class="statusLoading">加载中...</p>';
+
+    const [statsRes, listRes] = await Promise.all([
+      fetch('/api/admin/stats'),
+      fetch(`/api/admin/reviews?limit=50${statusFilter.value ? `&status=${encodeURIComponent(statusFilter.value)}` : ''}`)
+    ]);
+
+    const stats = await statsRes.json();
+    const listData = await listRes.json();
+
+    if (!statsRes.ok || !listRes.ok) {
+      statBox.textContent = '加载失败';
+      listBox.innerHTML = '<p class="statusError">后台数据加载失败</p>';
+      return;
+    }
+
+    statBox.textContent = `总数 ${stats.total}｜待审 ${stats.pendingReview}｜通过 ${stats.approved}｜驳回 ${stats.rejected}｜已发布 ${stats.published}`;
+
+    const items = listData.items || [];
+    if (!items.length) {
+      listBox.innerHTML = '<p class="statusEmpty">当前筛选下无数据</p>';
+      return;
+    }
+
+    listBox.innerHTML = items.map((it) => `
+      <article class="card adminCard">
+        <div class="cardTop">
+          <h3 class="title">${esc(it.title)}</h3>
+          <span class="date">${esc(it.status || '-')}</span>
+        </div>
+        <p class="summary">${esc(it.summary || '')}</p>
+        <div class="meta">提交者：${esc(it.submittedBy || 'anonymous')}｜${new Date(it.createdAt).toLocaleString()}</div>
+      </article>
+    `).join('');
+  }
+
+  refreshBtn.addEventListener('click', load);
+  statusFilter.addEventListener('change', load);
+  await load();
 }
