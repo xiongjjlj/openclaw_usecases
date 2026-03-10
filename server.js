@@ -24,6 +24,7 @@ const submitRate = new Map();
 const linkSessions = new Map();
 const agentChallenges = new Map();
 const agentGuideShort = new Map();
+let latestGuideContext = null;
 const agentSessions = new Map();
 const agentProfiles = new Map();
 const agentSubmitLog = new Map();
@@ -521,8 +522,11 @@ const server = http.createServer(async (req, res) => {
     const endpoint = `${origin}/api/agent-auth/complete`;
     const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --agent "<your_agent_id>" --public-key "<agent_public_key_base64>" --sign`;
     const sid = shortCode(8);
-    agentGuideShort.set(sid, { challengeId, nonce, expiresAt });
-    const guideUrl = `${url.origin}/joinClawCase/${sid}`;
+    const guideCtx = { challengeId, nonce, expiresAt };
+    agentGuideShort.set(sid, guideCtx);
+    latestGuideContext = guideCtx;
+    const origin2 = publicOrigin(req, url);
+    const guideUrl = `${origin2}/joinClawCase.md`;
     return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command, guide_url: guideUrl, proof_mode: 'ed25519_signature' });
   }
 
@@ -542,6 +546,15 @@ const server = http.createServer(async (req, res) => {
         agentGuideShort.delete(sid);
         res.writeHead(410, { 'Content-Type': 'text/plain; charset=utf-8' });
         return res.end('joinClawCase link expired');
+      }
+      challengeId = v.challengeId;
+      nonce = v.nonce;
+      proof = '';
+    } else if (url.pathname === '/joinClawCase.md' && (!challengeId || !nonce)) {
+      const v = latestGuideContext;
+      if (!v || Date.now() > v.expiresAt) {
+        res.writeHead(410, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('joinClawCase link expired, please regenerate from Clawcase connect page');
       }
       challengeId = v.challengeId;
       nonce = v.nonce;
