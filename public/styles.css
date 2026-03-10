@@ -98,7 +98,7 @@ nav a:hover { color: #000; }
 .controls {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin: 18px 0 12px;
 }

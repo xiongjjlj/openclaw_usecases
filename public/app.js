@@ -98,14 +98,13 @@ async function renderHome() {
 
   const grid = document.getElementById('grid');
   const searchInput = document.getElementById('searchInput');
-  const tagInput = document.getElementById('tagInput');
   const categoryTabs = document.getElementById('categoryTabs');
   const sortTabs = document.getElementById('sortTabs');
   const viewToggle = document.getElementById('viewToggle');
   const all = await getUseCases();
 
   async function paint() {
-    const list = await getUseCases(searchInput.value.trim(), tagInput.value.trim(), currentCategory);
+    const list = await getUseCases(searchInput.value.trim(), '', currentCategory);
     cache = sortUseCases(list);
     renderSortTabs(sortTabs, paint);
     renderCategoryTabs(categoryTabs, all, paint);
@@ -146,7 +145,6 @@ async function renderHome() {
   });
 
   searchInput.addEventListener('input', paint);
-  tagInput.addEventListener('input', paint);
   await paint();
 }
 
