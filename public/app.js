@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.10-dev+20260310.1745';
+const BUILD_VERSION = 'v0.4.11-dev+20260310.1748';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -170,7 +170,7 @@ function bindConnectInline() {
         return;
       }
 
-      const brief = `复制下面命令到你的 OpenClaw。连接成功后会自动跳转。\n${data.guide_url || ''}`;
+      const brief = `${data.guide_url || ''}`;
       cmd.textContent = brief;
       copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(brief);
@@ -400,7 +400,7 @@ function renderSubmit() {
       return;
     }
 
-    const brief = `复制下面命令到你的 OpenClaw。连接成功后会自动跳转。\n${data.guide_url || ''}`;
+    const brief = `${data.guide_url || ''}`;
     connectCommand.textContent = brief;
 
     copyConnectCmd.onclick = async () => {
