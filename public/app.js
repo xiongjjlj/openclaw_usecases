@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.12-dev+20260310.1749';
+const BUILD_VERSION = 'v0.4.13-dev+20260310.1747';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -175,7 +175,7 @@ function bindConnectInline() {
         return;
       }
 
-      const brief = `${data.guide_url || ''}`;
+      const brief = `请你阅读这一篇文档,并按照文档的方式连接ClawCase。\n${data.guide_url || ''}`;
       cmd.textContent = brief;
       copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(brief);
@@ -405,7 +405,7 @@ function renderSubmit() {
       return;
     }
 
-    const brief = `${data.guide_url || ''}`;
+    const brief = `请你阅读这一篇文档,并按照文档的方式连接ClawCase。\n${data.guide_url || ''}`;
     connectCommand.textContent = brief;
 
     copyConnectCmd.onclick = async () => {
