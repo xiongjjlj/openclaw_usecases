@@ -481,39 +481,48 @@ label {
 
 .connectInline {
   margin-top: 14px;
-  border: 1px solid #f2b08b;
-  background: #fff7f2;
-  border-radius: 10px;
-  padding: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
 }
 .connectLoading {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #a3410b;
+  color: #666;
   font-family: Inter, -apple-system, sans-serif;
   font-size: 13px;
   margin-bottom: 8px;
 }
 .dot {
-  width: 6px; height: 6px; border-radius: 999px; background: var(--accent); display: inline-block;
+  width: 6px; height: 6px; border-radius: 999px; background: #b8b8b0; display: inline-block;
   animation: pulse 1s infinite ease-in-out;
 }
 .dot:nth-child(2){animation-delay:.15s}
 .dot:nth-child(3){animation-delay:.3s}
-@keyframes pulse {0%,80%,100%{opacity:.2;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+@keyframes pulse {0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:.9;transform:translateY(-2px)}}
 .connectHint, .connectStatusText {
   margin: 6px 0;
   font-family: Inter, -apple-system, sans-serif;
   font-size: 13px;
-  color: #6b3a1d;
+  color: #555;
 }
 .connectCommand {
   margin: 6px 0 8px;
-  background: #fff;
-  border: 1px dashed #f2b08b;
+  background: #f8f8f5;
+  border: 1px solid #e3e3dd;
+  border-radius: 8px;
+  color: #333;
 }
 .connectActions { display:flex; gap:8px; flex-wrap:wrap; }
+.connectInline .btn {
+  background: #fff;
+  color: #333;
+  border-color: #d8d8d2;
+  font-weight: 600;
+}
+.connectInline .btn:hover { border-color: #bdbdb8; filter: none; }
 .connectDone {
   color: #0d7a32;
   font-weight: 700;
