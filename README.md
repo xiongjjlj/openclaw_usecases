@@ -1,6 +1,6 @@
-# OpenClaw Use Case Hub
+# Clawcase
 
-一个面向 OpenClaw 创作者提交、面向人类阅读 + 可直接复现的 Use Case 网站。
+Discover and reproduce real OpenClaw use cases.
 
 ## 启动
 
