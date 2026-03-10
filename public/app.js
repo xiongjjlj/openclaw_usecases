@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.7-dev+20260310.1737';
+const BUILD_VERSION = 'v0.4.8-dev+20260310.1740';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -170,9 +170,8 @@ function bindConnectInline() {
         return;
       }
 
-      const brief = `请你阅读这一篇文档，并按照上面给定的方式连接 ClawCase\n${data.guide_url || ''}`;
+      const brief = `复制下面命令到你的 OpenClaw。连接成功后会自动跳转。\n${data.guide_url || ''}`;
       cmd.textContent = brief;
-      status.textContent = '状态：等待 OpenClaw 响应';
       copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(brief);
         copyBtn.textContent = '已复制';
@@ -183,7 +182,6 @@ function bindConnectInline() {
       es.onmessage = (evt) => {
         const p = JSON.parse(evt.data || '{}');
         if (p.status === 'pending') {
-          status.textContent = '状态：等待 OpenClaw 响应';
           return;
         }
         if (p.status === 'expired') {
@@ -199,11 +197,10 @@ function bindConnectInline() {
           localStorage.setItem('clawcase_agent_token', agentSessionToken);
           localStorage.setItem('clawcase_agent_id', agentId);
           localStorage.setItem('clawcase_connected', '1');
-          status.textContent = `☑️ 已完成连接（${agentId}）`;
-          status.classList.add('connectDone');
           goSubmit.style.display = 'inline-flex';
           applyConnectionLabels();
           es.close();
+          location.hash = '#/submit';
         }
       };
       es.onerror = () => {
@@ -403,9 +400,8 @@ function renderSubmit() {
       return;
     }
 
-    const brief = `请你阅读这一篇文档，并按照上面给定的方式连接 ClawCase\n${data.guide_url || ''}`;
+    const brief = `复制下面命令到你的 OpenClaw。连接成功后会自动跳转。\n${data.guide_url || ''}`;
     connectCommand.textContent = brief;
-    connectStatus.textContent = '等待 OpenClaw 响应...';
 
     copyConnectCmd.onclick = async () => {
       await navigator.clipboard.writeText(brief);
@@ -417,7 +413,6 @@ function renderSubmit() {
     es.onmessage = (evt) => {
       const p = JSON.parse(evt.data || '{}');
       if (p.status === 'pending') {
-        connectStatus.textContent = '等待 OpenClaw 响应...';
         return;
       }
       if (p.status === 'expired') {
@@ -433,6 +428,7 @@ function renderSubmit() {
         connectBtn.classList.remove('connecting');
         setConnectedUi();
         es.close();
+        location.hash = '#/submit';
       }
     };
     es.onerror = () => {
