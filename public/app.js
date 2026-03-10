@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.1-dev+20260310.1635';
+const BUILD_VERSION = 'v0.4.3-dev+20260310.1643';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -151,47 +151,69 @@ function bindConnectInline() {
   const goSubmit = document.getElementById('goSubmitAfterConnect');
   if (!heroBtn || !panel) return;
 
-  let timer = null;
-  async function poll(code) {
-    if (timer) clearInterval(timer);
-    timer = setInterval(async () => {
-      const res = await fetch(`/api/auth/link/status?code=${encodeURIComponent(code)}`);
-      const data = await res.json();
-      status.textContent = `状态：${data.status || 'pending'}`;
-      if (data.status === 'linked') {
-        localStorage.setItem('clawcase_connected', '1');
-        status.textContent = '☑️ 已完成连接';
-        status.classList.add('connectDone');
-        loading.hidden = true;
-        goSubmit.style.display = 'inline-flex';
-        applyConnectionLabels();
-        clearInterval(timer);
-      }
-    }, 2500);
-  }
-
   heroBtn.addEventListener('click', async () => {
     panel.hidden = false;
     loading.hidden = false;
     status.classList.remove('connectDone');
     status.textContent = '状态：正在生成连接码...';
-    const res = await fetch('/api/auth/link/start', { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) {
+
+    try {
+      const res = await fetch('/api/agent-auth/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: 'web', version: '1' })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        loading.hidden = true;
+        status.textContent = `状态：失败（${data.error || 'unknown'}）`;
+        return;
+      }
+
+      cmd.textContent = data.command || '未生成';
+      status.textContent = '状态：等待 OpenClaw 响应';
+      copyBtn.onclick = async () => {
+        await navigator.clipboard.writeText(data.command || '');
+        copyBtn.textContent = '已复制';
+        setTimeout(() => (copyBtn.textContent = '复制连接命令'), 1200);
+      };
+
+      const es = new EventSource(`/api/agent-auth/events?challenge_id=${encodeURIComponent(data.challenge_id)}`);
+      es.onmessage = (evt) => {
+        const p = JSON.parse(evt.data || '{}');
+        if (p.status === 'pending') {
+          status.textContent = '状态：等待 OpenClaw 响应';
+          return;
+        }
+        if (p.status === 'expired') {
+          loading.hidden = true;
+          status.textContent = '状态：连接已过期，请重试';
+          es.close();
+          return;
+        }
+        if (p.status === 'verified') {
+          loading.hidden = true;
+          agentSessionToken = p.session_token || '';
+          agentId = p.agent_id || '';
+          localStorage.setItem('clawcase_agent_token', agentSessionToken);
+          localStorage.setItem('clawcase_agent_id', agentId);
+          localStorage.setItem('clawcase_connected', '1');
+          status.textContent = `☑️ 已完成连接（${agentId}）`;
+          status.classList.add('connectDone');
+          goSubmit.style.display = 'inline-flex';
+          applyConnectionLabels();
+          es.close();
+        }
+      };
+      es.onerror = () => {
+        loading.hidden = true;
+        status.textContent = '状态：连接中断，请重试';
+        es.close();
+      };
+    } catch (e) {
       loading.hidden = true;
-      status.textContent = `状态：失败（${data.error || 'unknown'}）`;
-      return;
+      status.textContent = `状态：失败（${e.message || 'network error'}）`;
     }
-    const command = `link clawcase ${data.code}`;
-    cmd.textContent = command;
-    status.textContent = '状态：等待 OpenClaw 认领';
-    loading.hidden = false;
-    copyBtn.onclick = async () => {
-      await navigator.clipboard.writeText(command);
-      copyBtn.textContent = '已复制';
-      setTimeout(() => (copyBtn.textContent = '复制连接命令'), 1200);
-    };
-    poll(data.code);
   });
 }
 
