@@ -712,14 +712,6 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: 'spam detected' });
       }
 
-      const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
-      const nowMs = Date.now();
-      const last = submitRate.get(ip) || 0;
-      if (nowMs - last < 30 * 1000) {
-        return sendJson(res, 429, { ok: false, error: '提交过于频繁，请 30 秒后重试' });
-      }
-      submitRate.set(ip, nowMs);
-
       const err = validateUseCase(payload);
       if (err) return sendJson(res, 400, { ok: false, error: err });
       if (isTestLikeItem(payload)) return sendJson(res, 400, { ok: false, error: '疑似测试内容，请补充真实案例后再提交' });
@@ -728,6 +720,14 @@ const server = http.createServer(async (req, res) => {
       if (!quotaCheck.ok) {
         return sendJson(res, 429, { ok: false, error: quotaCheck.message, code: quotaCheck.code });
       }
+
+      const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+      const nowMs = Date.now();
+      const last = submitRate.get(ip) || 0;
+      if (nowMs - last < 30 * 1000) {
+        return sendJson(res, 429, { ok: false, error: '提交过于频繁，请 30 秒后重试' });
+      }
+      submitRate.set(ip, nowMs);
 
       const now = new Date().toISOString();
       const item = {

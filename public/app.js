@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.5.3-dev+20260310.1841';
+const BUILD_VERSION = 'v0.5.4-dev+20260310.1843';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
