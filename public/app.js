@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.9-dev+20260310.1742';
+const BUILD_VERSION = 'v0.4.10-dev+20260310.1745';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -152,10 +152,10 @@ function bindConnectInline() {
   if (!heroBtn || !panel) return;
 
   heroBtn.addEventListener('click', async () => {
+    heroBtn.style.display = 'none';
     panel.hidden = false;
-    loading.hidden = false;
+    loading.hidden = true;
     status.classList.remove('connectDone');
-    status.textContent = '状态：正在生成连接码...';
 
     try {
       const res = await fetch('/api/agent-auth/start', {
