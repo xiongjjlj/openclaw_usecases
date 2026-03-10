@@ -22,7 +22,7 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.4.15-dev+20260310.1756';
+const BUILD_VERSION = 'v0.4.16-dev+20260310.1800';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
@@ -583,16 +583,46 @@ async function renderAdmin() {
     }
 
     listBox.innerHTML = items.map((it) => `
-      <article class="card adminCard">
+      <article class="card adminCard" data-id="${esc(it.id)}">
         <div class="cardTop">
           <h3 class="title">${esc(it.title)}</h3>
           <span class="date">${esc(it.status || '-')}</span>
         </div>
         <p class="summary">${esc(it.summary || '')}</p>
         <div class="meta">提交者：${esc(it.submittedBy || 'anonymous')}｜${new Date(it.createdAt).toLocaleString()}</div>
+        <div class="filterBar" style="margin-top:10px; gap:8px;">
+          <button class="btn" data-act="approve" data-id="${esc(it.id)}">通过</button>
+          <button class="btn" data-act="reject" data-id="${esc(it.id)}">驳回</button>
+          <button class="btn" data-act="request_changes" data-id="${esc(it.id)}">退回修改</button>
+        </div>
       </article>
     `).join('');
   }
+
+  listBox.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    const action = btn.getAttribute('data-act');
+    const reason = prompt('可选：填写审核备注/原因', '') || '';
+
+    btn.disabled = true;
+    try {
+      const res = await adminFetch(`/api/admin/reviews/${encodeURIComponent(id)}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision: action, reason, operator: 'bear-admin' })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`操作失败：${data.error || 'unknown'}`);
+        return;
+      }
+      await load();
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   saveTokenBtn.addEventListener('click', async () => {
     const token = (tokenInput.value || '').trim();
