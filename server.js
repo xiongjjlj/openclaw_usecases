@@ -10,6 +10,11 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'usecases.json');
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zxzpmmneiiicjqptgweq.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const USE_SUPABASE = Boolean(SUPABASE_SERVICE_ROLE_KEY);
+
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, JSON.stringify({ usecases: [] }, null, 2));
@@ -71,7 +76,74 @@ function ensureRequiredUseCases() {
   if (changed) writeDb(db);
 }
 
-ensureRequiredUseCases();
+if (!USE_SUPABASE) ensureRequiredUseCases();
+
+function normalizeItemFromDb(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    problem: row.problem,
+    workflow: row.workflow,
+    reproMode: row.repro_mode,
+    reproPrompt: row.repro_prompt || '',
+    manualSteps: row.manual_steps || '',
+    category: row.category,
+    tags: row.tags || [],
+    tools: row.tools || [],
+    links: row.links || [],
+    sourceDate: row.source_date || '',
+    evidenceNote: row.evidence_note || '',
+    submittedBy: row.submitted_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+async function supabaseSelectUseCases() {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY}`
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases?status=eq.published&order=created_at.desc`, { headers });
+  if (!res.ok) throw new Error(`supabase select failed: ${res.status}`);
+  const rows = await res.json();
+  return rows.map(normalizeItemFromDb);
+}
+
+async function supabaseInsertUseCase(item) {
+  const payload = {
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+    problem: item.problem,
+    workflow: item.workflow,
+    repro_mode: item.reproMode || 'semi-auto',
+    repro_prompt: item.reproPrompt || '',
+    manual_steps: item.manualSteps || '',
+    category: item.category || 'General',
+    tags: item.tags || [],
+    tools: item.tools || [],
+    links: item.links || [],
+    source_date: item.sourceDate || null,
+    evidence_note: item.evidenceNote || '',
+    submitted_by: item.submittedBy || 'anonymous-openclaw',
+    status: 'published'
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/use_cases`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`supabase insert failed: ${res.status}`);
+  const rows = await res.json();
+  return normalizeItemFromDb(rows[0]);
+}
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -138,11 +210,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/usecases' && req.method === 'GET') {
-    const db = readDb();
     const q = (url.searchParams.get('q') || '').toLowerCase();
     const tag = (url.searchParams.get('tag') || '').toLowerCase();
     const category = (url.searchParams.get('category') || '').toLowerCase();
-    let list = [...db.usecases].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    let list;
+
+    try {
+      list = USE_SUPABASE
+        ? await supabaseSelectUseCases()
+        : [...readDb().usecases].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, error: e.message });
+    }
 
     if (q) {
       list = list.filter((it) =>
@@ -168,7 +247,6 @@ const server = http.createServer(async (req, res) => {
       const err = validateUseCase(payload);
       if (err) return sendJson(res, 400, { ok: false, error: err });
 
-      const db = readDb();
       const now = new Date().toISOString();
       const item = {
         id: `uc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -176,7 +254,9 @@ const server = http.createServer(async (req, res) => {
         summary: payload.summary.trim(),
         problem: payload.problem.trim(),
         workflow: payload.workflow.trim(),
+        reproMode: (payload.reproMode || 'semi-auto').trim(),
         reproPrompt: payload.reproPrompt.trim(),
+        manualSteps: (payload.manualSteps || '').trim(),
         category: (payload.category || 'General').trim(),
         tools: (payload.tools || '')
           .split(',')
@@ -190,14 +270,22 @@ const server = http.createServer(async (req, res) => {
           .split('\n')
           .map((v) => v.trim())
           .filter(Boolean),
+        sourceDate: (payload.sourceDate || '').trim(),
+        evidenceNote: (payload.evidenceNote || '').trim(),
         submittedBy: (payload.submittedBy || 'anonymous-openclaw').trim(),
         createdAt: now,
         updatedAt: now
       };
 
+      if (USE_SUPABASE) {
+        const inserted = await supabaseInsertUseCase(item);
+        return sendJson(res, 201, { ok: true, item: inserted, backend: 'supabase' });
+      }
+
+      const db = readDb();
       db.usecases.push(item);
       writeDb(db);
-      return sendJson(res, 201, { ok: true, item });
+      return sendJson(res, 201, { ok: true, item, backend: 'json' });
     } catch (e) {
       return sendJson(res, 400, { ok: false, error: e.message });
     }
