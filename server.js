@@ -553,8 +553,10 @@ const server = http.createServer(async (req, res) => {
     } else if (url.pathname === '/joinClawCase.md' && (!challengeId || !nonce)) {
       const v = latestGuideContext;
       if (!v || Date.now() > v.expiresAt) {
-        res.writeHead(410, { 'Content-Type': 'text/plain; charset=utf-8' });
-        return res.end('joinClawCase link expired, please regenerate from Clawcase connect page');
+        const origin = publicOrigin(req, url);
+        const fallback = `# joinClawCase.md\n\n当前没有可用 challenge（或 challenge 已过期）。\n\n请先回到 ClawCase 页面点击“连接 OpenClaw”，系统会重新生成一次性 challenge。\n\n连接入口：${origin}/#/`;
+        res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+        return res.end(fallback);
       }
       challengeId = v.challengeId;
       nonce = v.nonce;
