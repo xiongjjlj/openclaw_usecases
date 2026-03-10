@@ -14,6 +14,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zxzpmmneiiicjqptgweq.s
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const USE_SUPABASE = Boolean(SUPABASE_SERVICE_ROLE_KEY);
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const APP_VERSION = process.env.APP_VERSION || 'v0.4.4+20260310.1646';
 
 const CATEGORY_ENUM = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建', '其他'];
 const STATUS_ENUM = ['draft', 'pending_review', 'approved', 'rejected', 'changes_requested', 'published'];
@@ -357,6 +359,20 @@ function validateDecisionPayload(body = {}) {
   return { decision, reason, operator: sanitizeText(body.operator || 'admin') || 'admin' };
 }
 
+function isAdminAuthorized(req) {
+  if (!ADMIN_TOKEN) return false;
+  const headerToken = String(req.headers['x-admin-token'] || '').trim();
+  const auth = String(req.headers.authorization || '').trim();
+  const bearer = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
+  return headerToken === ADMIN_TOKEN || bearer === ADMIN_TOKEN;
+}
+
+function requireAdmin(req, res) {
+  if (isAdminAuthorized(req)) return true;
+  sendJson(res, 401, { ok: false, error: 'admin auth required' });
+  return false;
+}
+
 function randomId(prefix = 'id') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -399,7 +415,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
-    return sendJson(res, 200, { ok: true, service: 'openclaw-usecase-hub' });
+    return sendJson(res, 200, { ok: true, service: 'openclaw-usecase-hub', version: APP_VERSION });
   }
 
   if (url.pathname === '/api/agent-auth/start' && req.method === 'POST') {
@@ -587,7 +603,13 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (url.pathname === '/api/admin/auth-check' && req.method === 'GET') {
+    if (!requireAdmin(req, res)) return;
+    return sendJson(res, 200, { ok: true });
+  }
+
   if (url.pathname === '/api/admin/reviews' && req.method === 'GET') {
+    if (!requireAdmin(req, res)) return;
     const status = (url.searchParams.get('status') || '').trim();
     const q = (url.searchParams.get('q') || '').trim();
     const category = (url.searchParams.get('category') || '').trim();
@@ -609,6 +631,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith('/api/admin/reviews/') && req.method === 'GET') {
+    if (!requireAdmin(req, res)) return;
     const id = decodeURIComponent(url.pathname.split('/').pop() || '');
     try {
       const items = USE_SUPABASE
@@ -626,6 +649,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (/^\/api\/admin\/reviews\/[^/]+\/decision$/.test(url.pathname) && req.method === 'POST') {
+    if (!requireAdmin(req, res)) return;
     const id = decodeURIComponent(url.pathname.split('/')[4] || '');
     try {
       const body = await parseBody(req);
@@ -646,12 +670,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/admin/logs' && req.method === 'GET') {
+    if (!requireAdmin(req, res)) return;
     const limit = Math.min(Number(url.searchParams.get('limit') || 100), 300);
     const db = readDb();
     return sendJson(res, 200, { ok: true, items: (db.reviewEvents || []).slice(0, limit) });
   }
 
   if (url.pathname === '/api/admin/stats' && req.method === 'GET') {
+    if (!requireAdmin(req, res)) return;
     try {
       if (USE_SUPABASE) {
         const items = await supabaseListUseCases({ publishedOnly: false, limit: 500 });

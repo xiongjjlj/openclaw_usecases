@@ -1,6 +1,6 @@
 {
   "name": "openclaw-usecase-hub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "OpenClaw Use Case Hub",
   "main": "server.js",
