@@ -9,11 +9,12 @@ function fmtDate(s) {
 }
 
 function esc(s = '') {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 async function getUseCases(q = '', tag = '', category = '') {
   const res = await fetch(`/api/usecases?q=${encodeURIComponent(q)}&tag=${encodeURIComponent(tag)}&category=${encodeURIComponent(category)}`);
+  if (!res.ok) throw new Error('加载失败');
   const data = await res.json();
   return data.items || [];
 }
@@ -27,8 +28,8 @@ function route() {
 }
 
 function renderCategoryTabs(container, allItems, onChange) {
-  const preferred = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建'];
-  const existed = [...new Set(allItems.map((x) => x.category || 'General'))];
+  const preferred = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建', '其他'];
+  const existed = [...new Set(allItems.map((x) => x.category || '其他'))];
   const ordered = [...preferred.filter((x) => existed.includes(x)), ...existed.filter((x) => !preferred.includes(x))];
   const categories = ['全部', ...ordered];
   container.innerHTML = '';
@@ -37,7 +38,13 @@ function renderCategoryTabs(container, allItems, onChange) {
     btn.className = `tab ${((c === '全部' && !currentCategory) || c === currentCategory) ? 'active' : ''}`;
     btn.textContent = c;
     btn.addEventListener('click', () => {
-      currentCategory = c === '全部' ? '' : c;
+      if (c === '全部') {
+        currentCategory = '';
+      } else if (currentCategory === c) {
+        currentCategory = '';
+      } else {
+        currentCategory = c;
+      }
       onChange();
     });
     container.appendChild(btn);
@@ -79,16 +86,18 @@ function popularScore(item) {
   return prior + depth;
 }
 
-function trendingScore(item) {
-  const ageHours = Math.max(1, (Date.now() - new Date(item.createdAt).getTime()) / 36e5);
-  return popularScore(item) + 120 / ageHours;
-}
-
 function sortUseCases(list) {
   if (currentSort === 'new') {
     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
   return [...list].sort((a, b) => popularScore(b) - popularScore(a));
+}
+
+function renderActiveFilters(container, searchValue) {
+  const chips = [];
+  if (searchValue) chips.push(`搜索: ${searchValue}`);
+  if (currentCategory) chips.push(`分类: ${currentCategory}`);
+  container.innerHTML = chips.map((x) => `<span class="chip">${esc(x)}</span>`).join('') || '<span class="chip muted">当前无筛选</span>';
 }
 
 async function renderHome() {
@@ -101,46 +110,67 @@ async function renderHome() {
   const categoryTabs = document.getElementById('categoryTabs');
   const sortTabs = document.getElementById('sortTabs');
   const viewToggle = document.getElementById('viewToggle');
-  const all = await getUseCases();
+  const activeFilters = document.getElementById('activeFilters');
+  const clearFilters = document.getElementById('clearFilters');
+
+  let all = [];
+  try {
+    all = await getUseCases();
+  } catch {
+    grid.innerHTML = '<p class="statusError">加载失败，请刷新重试。</p>';
+    return;
+  }
 
   async function paint() {
-    const list = await getUseCases(searchInput.value.trim(), '', currentCategory);
-    cache = sortUseCases(list);
-    renderSortTabs(sortTabs, paint);
-    renderCategoryTabs(categoryTabs, all, paint);
+    grid.innerHTML = '<p class="statusLoading">加载中...</p>';
+    try {
+      const list = await getUseCases(searchInput.value.trim(), '', currentCategory);
+      cache = sortUseCases(list);
+      renderSortTabs(sortTabs, paint);
+      renderCategoryTabs(categoryTabs, all, paint);
+      renderActiveFilters(activeFilters, searchInput.value.trim());
 
-    grid.innerHTML = '';
-    if (!cache.length) {
-      grid.innerHTML = '<p>暂无用例，换个分类或关键词试试。</p>';
-      return;
-    }
+      grid.innerHTML = '';
+      if (!cache.length) {
+        grid.innerHTML = '<p class="statusEmpty">未找到结果，试试更换关键词或清空筛选。</p>';
+        return;
+      }
 
-    const cards = document.createElement('div');
-    cards.className = currentView === 'grid' ? 'grid' : 'listView';
-    for (const item of cache) {
-      const card = document.getElementById('cardTpl').content.cloneNode(true);
-      card.querySelector('.title').textContent = item.title;
-      card.querySelector('.date').textContent = fmtDate(item.createdAt);
-      card.querySelector('.summary').textContent = item.summary;
-      const cardEl = card.querySelector('.card');
-      card.querySelector('.meta').textContent = `[${item.category || 'General'}] ${(item.tags || []).slice(0, 3).map((t) => `#${t}`).join(' ')}`;
-      cardEl.style.cursor = 'pointer';
-      cardEl.tabIndex = 0;
-      cardEl.addEventListener('click', () => { location.hash = `#/usecase/${item.id}`; });
-      cardEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          location.hash = `#/usecase/${item.id}`;
-        }
-      });
-      cards.appendChild(card);
+      const cards = document.createElement('div');
+      cards.className = currentView === 'grid' ? 'grid' : 'listView';
+      for (const item of cache) {
+        const card = document.getElementById('cardTpl').content.cloneNode(true);
+        card.querySelector('.title').textContent = item.title;
+        card.querySelector('.date').textContent = fmtDate(item.createdAt);
+        card.querySelector('.summary').textContent = item.summary;
+        const cardEl = card.querySelector('.card');
+        card.querySelector('.meta').textContent = `[${item.category || '其他'}] ${(item.tags || []).slice(0, 3).map((t) => `#${t}`).join(' ')}`;
+        cardEl.style.cursor = 'pointer';
+        cardEl.tabIndex = 0;
+        cardEl.addEventListener('click', () => { location.hash = `#/usecase/${item.id}`; });
+        cardEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            location.hash = `#/usecase/${item.id}`;
+          }
+        });
+        cards.appendChild(card);
+      }
+      grid.appendChild(cards);
+    } catch {
+      grid.innerHTML = '<p class="statusError">加载失败，请稍后重试。</p>';
     }
-    grid.appendChild(cards);
   }
 
   viewToggle.addEventListener('click', () => {
     currentView = currentView === 'grid' ? 'list' : 'grid';
-    viewToggle.textContent = currentView === 'grid' ? 'View: Grid' : 'View: List';
+    viewToggle.textContent = currentView === 'grid' ? '☰ 切换为列表' : '▦ 切换为网格';
+    paint();
+  });
+
+  clearFilters.addEventListener('click', () => {
+    searchInput.value = '';
+    currentCategory = '';
     paint();
   });
 
@@ -186,21 +216,30 @@ async function renderDetail(id) {
 
   const meta = node.querySelector('.detailMeta');
   meta.innerHTML = `
-    <p>${esc(item.submittedBy || 'anonymous')} · ${new Date(item.createdAt).toLocaleString()}</p>
-    <p>分类：<strong>${esc(item.category || 'General')}</strong></p>
-    <p>${(item.tags || []).map((t) => `<span>#${esc(t)}</span>`).join(' ')}</p>
-    <p>${(item.tools || []).map((t) => `<code>${esc(t)}</code>`).join(' ')}</p>
+    <p><strong>标题：</strong>${esc(item.title)}</p>
+    <p><strong>提交时间：</strong>${new Date(item.createdAt).toLocaleString()}</p>
+    <p><strong>提交者：</strong>${esc(item.submittedBy || 'anonymous')}</p>
+    <p><strong>分类：</strong><strong>${esc(item.category || '其他')}</strong></p>
+    <p><strong>标签：</strong>${(item.tags || []).map((t) => `<span>#${esc(t)}</span>`).join(' ') || '无'}</p>
   `;
 
   const ul = node.querySelector('.dLinks');
-  (item.links || []).forEach((l) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<a href="${esc(l)}" target="_blank" rel="noreferrer">${esc(l)}</a>`;
-    ul.appendChild(li);
-  });
+  const links = item.links || [];
+  if (!links.length) {
+    ul.innerHTML = '<li>暂无参考链接</li>';
+  } else {
+    links.forEach((l) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<a href="${esc(l)}" target="_blank" rel="noopener noreferrer">${esc(l)}</a> <span class="thirdHint">（第三方链接）</span>`;
+      ul.appendChild(li);
+    });
+  }
+
   node.querySelector('.copyBtn').addEventListener('click', async () => {
-    await navigator.clipboard.writeText(item.reproPrompt);
-    alert('Prompt 已复制');
+    const ok = window.confirm('该 Prompt 来自社区投稿，可能包含不安全指令。请先人工审查后再执行。是否继续复制？');
+    if (!ok) return;
+    await navigator.clipboard.writeText(item.reproPrompt || '');
+    alert('Prompt 已复制。请先审查再使用。');
   });
 
   app.appendChild(node);
@@ -227,9 +266,11 @@ function renderSubmit() {
     const data = await res.json();
     if (!res.ok) {
       msg.textContent = `提交失败：${data.error || '未知错误'}`;
+      msg.className = 'err';
       return;
     }
-    msg.textContent = '提交成功 ✅';
+    msg.textContent = '提交成功 ✅（已进入审核队列）';
+    msg.className = 'ok';
     form.reset();
   });
 }

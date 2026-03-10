@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clawcase</title>
-    <link rel="stylesheet" href="/styles.css?v=202603091245" />
+    <link rel="stylesheet" href="/styles.css?v=202603101546" />
   </head>
   <body>
     <div class="bg"></div>
@@ -28,13 +28,17 @@
       </section>
 
       <section class="controls">
-        <input id="searchInput" placeholder="搜索 use case（标题/详情/工作流）" />
+        <input id="searchInput" placeholder="搜索 use case（标题/详情/工作流/Prompt）" />
+        <div class="filterBar">
+          <div id="activeFilters" class="activeFilters"></div>
+          <button id="clearFilters" class="clearBtn" type="button">清空筛选</button>
+        </div>
       </section>
       <section class="sortRow">
         <div id="sortTabs" class="tabs"></div>
         <div class="rightTools">
           <div id="categoryTabs" class="tabs"></div>
-          <button id="viewToggle" class="viewBtn" type="button">View: Grid</button>
+          <button id="viewToggle" class="viewBtn" type="button">☰ 切换为列表</button>
         </div>
       </section>
       <section id="grid" class="listContainer"></section>
@@ -85,18 +89,30 @@
       <section class="submitWrap">
         <a href="#/" class="back">← 返回首页</a>
         <article class="submitCard">
-          <h2>提交 Use Case（免登录）</h2>
+          <h2>提交 Use Case（社区投稿）</h2>
+          <p class="publicNotice">公开说明：你提交的内容将公开展示。请勿填写账号密码、密钥、内部链接等敏感信息。</p>
           <form id="submitForm">
-            <label>标题*<input name="title" required maxlength="140" /></label>
-            <label>一句话总结*<textarea name="summary" required></textarea></label>
-            <label>解决的问题*<textarea name="problem" required></textarea></label>
-            <label>工作流步骤*<textarea name="workflow" required></textarea></label>
-            <label>复现 Prompt*<textarea name="reproPrompt" required></textarea></label>
-            <label>分类*<input name="category" required placeholder="例如：交易与预测市场 / 运维与部署 / 移动与可穿戴" /></label>
-            <label>使用工具（逗号分隔）<input name="tools" /></label>
-            <label>标签（逗号分隔）<input name="tags" /></label>
-            <label>参考链接（每行一个）<textarea name="links"></textarea></label>
-            <label>提交者<input name="submittedBy" /></label>
+            <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" />
+            <label>标题 <span class="req">*</span><span class="hint">（公开，必填，≤140字）</span><input name="title" required maxlength="140" placeholder="例：用 OpenClaw 自动整理日报并推送飞书" /></label>
+            <label>一句话总结 <span class="req">*</span><span class="hint">（公开，必填，1-2 句）</span><textarea name="summary" required placeholder="例：每天 18:00 自动汇总 GitHub + Feishu 动态并推送给团队"></textarea></label>
+            <label>解决的问题 <span class="req">*</span><span class="hint">（公开，必填）</span><textarea name="problem" required placeholder="说明这个用例解决了什么痛点"></textarea></label>
+            <label>工作流步骤 <span class="req">*</span><span class="hint">（公开，必填，建议分点）</span><textarea name="workflow" required placeholder="1) 输入数据源 2) 调度任务 3) 输出结果"></textarea></label>
+            <label>复现 Prompt <span class="req">*</span><span class="hint">（公开，必填）</span><textarea name="reproPrompt" required placeholder="用于复现的完整 Prompt（请勿包含敏感信息）"></textarea></label>
+            <label>分类 <span class="req">*</span><span class="hint">（公开，必选）</span>
+              <select name="category" required>
+                <option value="" selected disabled>请选择分类</option>
+                <option>办公与效率</option>
+                <option>运维与自动化</option>
+                <option>研究与交易</option>
+                <option>移动与硬件</option>
+                <option>开发与构建</option>
+                <option>其他</option>
+              </select>
+            </label>
+            <label>使用工具 <span class="hint">（公开，选填，逗号分隔）</span><input name="tools" placeholder="如：OpenClaw, Feishu, Supabase" /></label>
+            <label>标签 <span class="hint">（公开，选填，逗号分隔）</span><input name="tags" placeholder="如：自动化, 日报, 运营" /></label>
+            <label>参考链接 <span class="hint">（公开，选填，每行一个）</span><textarea name="links" placeholder="https://..."></textarea></label>
+            <label>提交者 <span class="hint">（公开，选填）</span><input name="submittedBy" placeholder="昵称或团队名" /></label>
             <button class="btn" type="submit">提交</button>
           </form>
           <p id="submitMsg"></p>
@@ -104,6 +120,6 @@
       </section>
     </template>
 
-    <script src="/app.js?v=202603091505"></script>
+    <script src="/app.js?v=202603101546"></script>
   </body>
 </html>

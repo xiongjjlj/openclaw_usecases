@@ -20,6 +20,9 @@ if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, JSON.stringify({ usecases: [] }, null, 2));
 }
 
+const CATEGORY_ENUM = ['办公与效率', '运维与自动化', '研究与交易', '移动与硬件', '开发与构建', '其他'];
+const submitRate = new Map();
+
 const REQUIRED_USE_CASES = [
   { id: 'uc_beeclaw_trading', title: 'BeeClaw：以 OpenClaw 为执行内核的交易 Bot', category: '交易与预测市场' },
   { id: 'uc_mission_control', title: 'Mission Control：可视化运维 Case', category: '运维与部署' },
@@ -166,6 +169,14 @@ function parseBody(req) {
   });
 }
 
+function sanitizeText(value = '') {
+  return String(value)
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/<\/?script[^>]*>/gi, '')
+    .trim();
+}
+
 function validateUseCase(payload) {
   const required = ['title', 'summary', 'problem', 'workflow', 'reproPrompt'];
   for (const key of required) {
@@ -174,6 +185,18 @@ function validateUseCase(payload) {
     }
   }
   if ((payload.title || '').length > 140) return 'title too long';
+  if (!CATEGORY_ENUM.includes(payload.category)) return 'invalid category';
+
+  const links = String(payload.links || '').split('\n').map((v) => v.trim()).filter(Boolean);
+  for (const link of links) {
+    try {
+      const u = new URL(link);
+      if (!['http:', 'https:'].includes(u.protocol)) return 'invalid link protocol';
+    } catch {
+      return 'invalid link';
+    }
+  }
+
   return null;
 }
 
@@ -244,35 +267,48 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/usecases' && req.method === 'POST') {
     try {
       const payload = await parseBody(req);
+
+      if (payload.website && String(payload.website).trim()) {
+        return sendJson(res, 400, { ok: false, error: 'spam detected' });
+      }
+
+      const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+      const nowMs = Date.now();
+      const last = submitRate.get(ip) || 0;
+      if (nowMs - last < 30 * 1000) {
+        return sendJson(res, 429, { ok: false, error: '提交过于频繁，请 30 秒后重试' });
+      }
+      submitRate.set(ip, nowMs);
+
       const err = validateUseCase(payload);
       if (err) return sendJson(res, 400, { ok: false, error: err });
 
       const now = new Date().toISOString();
       const item = {
         id: `uc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-        title: payload.title.trim(),
-        summary: payload.summary.trim(),
-        problem: payload.problem.trim(),
-        workflow: payload.workflow.trim(),
-        reproMode: (payload.reproMode || 'semi-auto').trim(),
-        reproPrompt: payload.reproPrompt.trim(),
-        manualSteps: (payload.manualSteps || '').trim(),
-        category: (payload.category || 'General').trim(),
+        title: sanitizeText(payload.title),
+        summary: sanitizeText(payload.summary),
+        problem: sanitizeText(payload.problem),
+        workflow: sanitizeText(payload.workflow),
+        reproMode: sanitizeText(payload.reproMode || 'semi-auto') || 'semi-auto',
+        reproPrompt: sanitizeText(payload.reproPrompt),
+        manualSteps: sanitizeText(payload.manualSteps || ''),
+        category: sanitizeText(payload.category || '其他') || '其他',
         tools: (payload.tools || '')
           .split(',')
-          .map((v) => v.trim())
+          .map((v) => sanitizeText(v))
           .filter(Boolean),
         tags: (payload.tags || '')
           .split(',')
-          .map((v) => v.trim())
+          .map((v) => sanitizeText(v))
           .filter(Boolean),
         links: (payload.links || '')
           .split('\n')
-          .map((v) => v.trim())
+          .map((v) => sanitizeText(v))
           .filter(Boolean),
-        sourceDate: (payload.sourceDate || '').trim(),
-        evidenceNote: (payload.evidenceNote || '').trim(),
-        submittedBy: (payload.submittedBy || 'anonymous-openclaw').trim(),
+        sourceDate: sanitizeText(payload.sourceDate || ''),
+        evidenceNote: sanitizeText(payload.evidenceNote || ''),
+        submittedBy: sanitizeText(payload.submittedBy || 'anonymous-openclaw') || 'anonymous-openclaw',
         createdAt: now,
         updatedAt: now
       };
