@@ -49,6 +49,17 @@ nav a {
 }
 nav a:hover { color: #000; }
 
+.connectBtn {
+  margin-left: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff !important;
+  border: 1px solid var(--accent);
+  font-weight: 700;
+}
+.connectBtn:hover { filter: brightness(0.95); }
+
 #app {
   max-width: 1280px;
   margin: 0 auto;

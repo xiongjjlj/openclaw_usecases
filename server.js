@@ -216,6 +216,15 @@ function staticFile(reqPath) {
   return fullPath;
 }
 
+const linkSessions = new Map();
+
+function genLinkCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "CLAW-";
+  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -239,6 +248,36 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
     return sendJson(res, 200, { ok: true, service: 'openclaw-usecase-hub' });
+  }
+
+
+  if (url.pathname === '/api/auth/link/start' && req.method === 'POST') {
+    const code = genLinkCode();
+    linkSessions.set(code, { status: 'pending', createdAt: Date.now() });
+    return sendJson(res, 200, { ok: true, code, expiresInSec: 600 });
+  }
+
+  if (url.pathname === '/api/auth/link/status' && req.method === 'GET') {
+    const code = (url.searchParams.get('code') || '').trim();
+    const sess = linkSessions.get(code);
+    if (!sess) return sendJson(res, 404, { ok: false, status: 'not_found' });
+    if (Date.now() - sess.createdAt > 10 * 60 * 1000) {
+      linkSessions.delete(code);
+      return sendJson(res, 410, { ok: false, status: 'expired' });
+    }
+    return sendJson(res, 200, { ok: true, status: sess.status });
+  }
+
+  // Temporary completion endpoint for integration testing.
+  if (url.pathname === '/api/auth/link/complete' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const code = (body.code || '').trim();
+    const sess = linkSessions.get(code);
+    if (!sess) return sendJson(res, 404, { ok: false, error: 'code not found' });
+    sess.status = 'linked';
+    sess.linkedAt = Date.now();
+    linkSessions.set(code, sess);
+    return sendJson(res, 200, { ok: true, status: 'linked' });
   }
 
   if (url.pathname === '/api/usecases' && req.method === 'GET') {

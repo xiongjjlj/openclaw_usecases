@@ -24,6 +24,7 @@ function route() {
   const [, , id] = hash.match(/^#\/(|usecase\/([^/]+)|submit)$/) || [];
   if (hash.startsWith('#/usecase/')) return renderDetail(id);
   if (hash === '#/submit') return renderSubmit();
+  if (hash === '#/connect') return renderConnect();
   return renderHome();
 }
 
@@ -277,3 +278,39 @@ function renderSubmit() {
 
 window.addEventListener('hashchange', route);
 route();
+
+function renderConnect() {
+  app.innerHTML = '';
+  const node = document.getElementById('connectTpl').content.cloneNode(true);
+  app.appendChild(node);
+
+  const startBtn = document.getElementById('startLinkBtn');
+  const codeBox = document.getElementById('linkCodeBox');
+  const statusEl = document.getElementById('linkStatus');
+
+  let timer = null;
+
+  async function poll(code) {
+    if (timer) clearInterval(timer);
+    timer = setInterval(async () => {
+      const res = await fetch(`/api/auth/link/status?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      statusEl.textContent = `状态：${data.status || 'pending'}`;
+      if (data.status === 'linked') {
+        clearInterval(timer);
+      }
+    }, 2500);
+  }
+
+  startBtn.addEventListener('click', async () => {
+    const res = await fetch('/api/auth/link/start', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = `状态：失败（${data.error || 'unknown'}）`;
+      return;
+    }
+    codeBox.textContent = data.code;
+    statusEl.textContent = '状态：等待 OpenClaw 认领';
+    poll(data.code);
+  });
+}
