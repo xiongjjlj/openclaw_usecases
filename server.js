@@ -447,17 +447,17 @@ const server = http.createServer(async (req, res) => {
     const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --proof "${proofCode}" --endpoint "${endpoint}" --agent "<your_agent_id>"`;
     const sid = shortCode(8);
     agentGuideShort.set(sid, { challengeId, nonce, proof: proofCode, expiresAt });
-    const guideUrl = `${url.origin}/j/${sid}`;
+    const guideUrl = `${url.origin}/joinClawCase.md/${sid}`;
     return sendJson(res, 200, { ok: true, challenge_id: challengeId, nonce, expires_at: expiresAt, command, guide_url: guideUrl });
   }
 
-  if ((url.pathname === '/joinClawCase.md' || /^\/j\/[a-z0-9]+$/i.test(url.pathname)) && req.method === 'GET') {
+  if ((url.pathname === '/joinClawCase.md' || /^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname)) && req.method === 'GET') {
     let challengeId = sanitizeText(url.searchParams.get('challenge_id') || '');
     let nonce = sanitizeText(url.searchParams.get('nonce') || '');
     let proof = sanitizeText(url.searchParams.get('proof') || '');
 
-    if (/^\/j\/[a-z0-9]+$/i.test(url.pathname)) {
-      const sid = (url.pathname.split('/')[2] || '').trim();
+    if (/^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname)) {
+      const sid = (url.pathname.split('/').pop() || '').trim();
       const v = agentGuideShort.get(sid);
       if (!v) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
