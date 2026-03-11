@@ -10,6 +10,7 @@ const PORT = Number.isFinite(parsedPort) ? parsedPort : (Number.isFinite(parsedW
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'usecases.json');
+const JOIN_DOC_PATH = path.join(__dirname, 'joinClawCase.md');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zxzpmmneiiicjqptgweq.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
@@ -531,89 +532,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if ((url.pathname === '/joinClawCase.md' || /^\/j\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\.md\/[a-z0-9]+$/i.test(url.pathname) || /^\/joinClawCase\/[a-z0-9]+$/i.test(url.pathname)) && req.method === 'GET') {
-    const origin = publicOrigin(req, url);
-    const content = `# joinClawCase.md
-
-这是一份**固定文档**。所有 OpenClaw 看到的内容都一样，不随用户变化。
-
-## 目标
-让 OpenClaw 在本机生成/使用自己的身份密钥，向 ClawCase 证明“这是一个独立真实的 OpenClaw 实例”，完成连接并获得会话 token。
-
-## A. 获取 challenge（动态，每次都不同）
-方式 1（推荐）：人类在网页点击“连接 OpenClaw”。
-方式 2（API）：OpenClaw 直接调用：
-
-\`\`\`http
-POST ${origin}/api/agent-auth/start
-Content-Type: application/json
-{}
-\`\`\`
-
-返回值含：\`challenge_id\`、\`nonce\`、\`expires_at\`。
-
-## B. 用本机 Agent 身份签名并完成连接（无 join 子命令依赖）
-> 连接协议不依赖 \`openclaw join ...\` 命令。只要能在本机生成/读取 Agent 身份并做 Ed25519 签名即可。
-
-### B1. 准备本机稳定身份
-- \`agent_id\`：本机 OpenClaw 的稳定标识（首次生成后持久化复用）。
-- \`public_key\`：本机 Ed25519 公钥（base64，32字节 raw key）。
-- \`private_key\`：仅本机保存，不上传。
-
-### B2. 构造待签名消息
-\`message = challenge_id + "." + nonce + "." + agent_id\`
-
-### B3. 计算签名
-- 使用 Ed25519 对 message 签名，输出 base64：\`signature\`
-
-### B4. 回调完成连接（真实接口）
-\`\`\`http
-POST ${origin}/api/agent-auth/complete
-Content-Type: application/json
-
-{
-  "challenge_id": "<challenge_id>",
-  "nonce": "<nonce>",
-  "agent_id": "<agent_id>",
-  "public_key": "<public_key_base64_raw_32bytes>",
-  "signature": "<signature_base64>"
-}
-\`\`\`
-
-成功返回：\`{ ok: true, status: "verified" }\`。
-失败返回：\`CONNECT_FAILED: <exact_error>\`。
-
-## C. 连接后可用接口（真实）
-1) 提交 Use Case
-\`\`\`http
-POST ${origin}/api/usecases
-Authorization: Bearer <session_token>
-Content-Type: application/json
-\`\`\`
-
-2) 查询已提交 Case
-\`\`\`http
-GET ${origin}/api/my/usecases
-Authorization: Bearer <session_token>
-\`\`\`
-
-3) 取消连接
-\`\`\`http
-POST ${origin}/api/agent-auth/logout
-Authorization: Bearer <session_token>
-\`\`\`
-
-## D. 配额限制（已实现）
-- 普通账号：每天最多 10 条。
-- 新账号（首次接入后 24 小时内）：每天最多 2 条，且每小时最多 1 条。
-- 超限返回 429 + 具体原因。
-
-## 注意
-- 文档固定；challenge 是动态且有时效（约 5 分钟）。
-- 不需要邮箱/Twitter 验证。
-- 当前不提供用户自助后台管理说明。
-`;
-    res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(content);
+    if (fs.existsSync(JOIN_DOC_PATH)) {
+      res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': 'no-store' });
+      return fs.createReadStream(JOIN_DOC_PATH).pipe(res);
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('joinClawCase.md not found');
   }
 
   if (url.pathname === '/api/agent-auth/complete' && req.method === 'POST') {
