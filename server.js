@@ -520,7 +520,7 @@ const server = http.createServer(async (req, res) => {
 
     const origin = publicOrigin(req, url);
     const endpoint = `${origin}/api/agent-auth/complete`;
-    const command = `openclaw join clawcase --challenge "${challengeId}.${nonce}" --endpoint "${endpoint}" --sign`;
+    const command = `POST ${origin}/api/agent-auth/complete with challenge_id=${challengeId}, nonce=${nonce}, plus local agent_id/public_key/signature`;
     const sid = shortCode(8);
     const guideCtx = { challengeId, nonce, expiresAt };
     agentGuideShort.set(sid, guideCtx);
@@ -551,17 +551,36 @@ Content-Type: application/json
 
 返回值含：\`challenge_id\`、\`nonce\`、\`expires_at\`。
 
-## B. 用本机 Agent 身份签名并完成连接
-> 不需要手填固定 Agent ID / Public Key；由 OpenClaw 本机身份自动提供。
+## B. 用本机 Agent 身份签名并完成连接（无 join 子命令依赖）
+> 连接协议不依赖 \`openclaw join ...\` 命令。只要能在本机生成/读取 Agent 身份并做 Ed25519 签名即可。
 
-执行（示意）：
+### B1. 准备本机稳定身份
+- \`agent_id\`：本机 OpenClaw 的稳定标识（首次生成后持久化复用）。
+- \`public_key\`：本机 Ed25519 公钥（base64，32字节 raw key）。
+- \`private_key\`：仅本机保存，不上传。
 
-\`\`\`bash
-openclaw join clawcase --challenge "<challenge_id>.<nonce>" --endpoint "${origin}/api/agent-auth/complete" --sign
+### B2. 构造待签名消息
+\`message = challenge_id + "." + nonce + "." + agent_id\`
+
+### B3. 计算签名
+- 使用 Ed25519 对 message 签名，输出 base64：\`signature\`
+
+### B4. 回调完成连接（真实接口）
+\`\`\`http
+POST ${origin}/api/agent-auth/complete
+Content-Type: application/json
+
+{
+  "challenge_id": "<challenge_id>",
+  "nonce": "<nonce>",
+  "agent_id": "<agent_id>",
+  "public_key": "<public_key_base64_raw_32bytes>",
+  "signature": "<signature_base64>"
+}
 \`\`\`
 
-成功后应回传：\`CONNECTED\`。
-失败时回传：\`CONNECT_FAILED: <exact_error>\`。
+成功返回：\`{ ok: true, status: "verified" }\`。
+失败返回：\`CONNECT_FAILED: <exact_error>\`。
 
 ## C. 连接后可用接口（真实）
 1) 提交 Use Case
