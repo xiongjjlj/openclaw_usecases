@@ -1,4 +1,4 @@
-# Clawcase
+# ClawCase
 
 Discover and reproduce real OpenClaw use cases.
 

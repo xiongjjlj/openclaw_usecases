@@ -22,23 +22,61 @@ async function adminFetch(url, options = {}) {
 let agentSessionToken = localStorage.getItem('clawcase_agent_token') || '';
 let agentId = localStorage.getItem('clawcase_agent_id') || '';
 
-const BUILD_VERSION = 'v0.5.8-dev+20260311.1135';
+const BUILD_VERSION = 'v0.5.9-dev+20260318.1225';
 const buildVersionEl = document.getElementById('buildVersion');
 if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
 
+function clearAgentSession() {
+  agentSessionToken = '';
+  agentId = '';
+  localStorage.removeItem('clawcase_agent_token');
+  localStorage.removeItem('clawcase_agent_id');
+  localStorage.removeItem('clawcase_connected');
+}
 
 function isConnected() {
-  return localStorage.getItem('clawcase_connected') === '1' || Boolean(agentSessionToken);
+  return Boolean(agentSessionToken);
 }
 
 function applyConnectionLabels() {
   const heroBtn = document.getElementById('heroConnectSubmitBtn');
+  const badge = document.getElementById('connectionBadge');
   if (heroBtn) {
     if (isConnected()) {
-      heroBtn.textContent = '☑️ 已连接OpenClaw';
+      heroBtn.textContent = agentId ? `☑️ 已连接 ${agentId}` : '☑️ 已连接 OpenClaw';
     } else {
       heroBtn.textContent = '连接 OpenClaw，提交 UseCase';
     }
+  }
+  if (badge) {
+    badge.textContent = isConnected() ? `已连接：${agentId || 'OpenClaw'}` : '未连接';
+  }
+}
+
+async function refreshAgentSession() {
+  if (!agentSessionToken) {
+    applyConnectionLabels();
+    return false;
+  }
+  try {
+    const res = await fetch('/api/agent-auth/me', {
+      headers: { Authorization: `Bearer ${agentSessionToken}` }
+    });
+    if (!res.ok) {
+      clearAgentSession();
+      applyConnectionLabels();
+      return false;
+    }
+    const data = await res.json();
+    agentId = data.agent_id || agentId || '';
+    localStorage.setItem('clawcase_agent_token', agentSessionToken);
+    localStorage.setItem('clawcase_agent_id', agentId);
+    localStorage.setItem('clawcase_connected', '1');
+    applyConnectionLabels();
+    return true;
+  } catch (_) {
+    applyConnectionLabels();
+    return Boolean(agentSessionToken);
   }
 }
 
@@ -483,8 +521,7 @@ function renderSubmit() {
 }
 
 window.addEventListener('hashchange', route);
-applyConnectionLabels();
-route();
+refreshAgentSession().finally(route);
 
 function renderConnect() {
   app.innerHTML = '';
